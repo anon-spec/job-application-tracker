@@ -1,0 +1,122 @@
+
+
+
+{% extends "base.html" %}
+
+{% block title %}Applications{% endblock %}
+
+{% block content %}
+
+<!--CRUD applications page
+Create/Read/Update/Delete applications from dataset
+-->
+
+<h1>Applications</h1>
+
+<section class="card">
+	<h2>Add Application</h2>
+	<form action="{{ url_for('applications_create') }}" method="post">
+		<div class="row">
+			<div>
+				<label for="create-job-id">Job ID</label>
+				<input id="create-job-id" name="job_id" type="number" required>
+			</div>
+			<div>
+				<label for="create-date">Application Date</label>
+				<input id="create-date" name="application_date" type="date" required>
+			</div>
+			<div>
+				<label for="create-status">Status</label>
+				<select id="create-status" name="status">
+					<option value="Applied">Applied</option>
+					<option value="Screening">Screening</option>
+					<option value="Interview">Interview</option>
+					<option value="Offer">Offer</option>
+					<option value="Rejected">Rejected</option>
+					<option value="Withdrawn">Withdrawn</option>
+				</select>
+			</div>
+		</div>
+
+		<div class="row">
+			<div>
+				<label for="create-resume">Resume Version</label>
+				<input id="create-resume" name="resume_version" type="text" placeholder="e.g. v3.0">
+			</div>
+			<div>
+				<label for="create-cover-letter">Cover Letter Sent</label>
+				<select id="create-cover-letter" name="cover_letter_sent">
+					<option value="1">Yes</option>
+					<option value="0">No</option>
+				</select>
+			</div>
+			<div>
+				<label for="create-interview-data">Interview Data (JSON)</label>
+				<textarea id="create-interview-data" name="interview_data" rows="1" placeholder='{"round":1,"date":"2026-03-31"}'></textarea>
+			</div>
+		</div>
+
+		<button type="submit">Add Application</button>
+	</form>
+</section>
+
+<section>
+	<h2>Application List</h2>
+
+	{% if applications %}
+		<table>
+			<thead>
+				<tr>
+					<th>ID</th>
+					<th>Job ID</th>
+					<th>Date</th>
+					<th>Status</th>
+					<th>Resume</th>
+					<th>Cover Letter</th>
+					<th>Interview Data</th>
+					<th>Actions</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for application in applications %}
+					<tr>
+						<td>{{ application.application_id }}</td>
+						<td>{{ application.job_id }}</td>
+						<td>{{ application.application_date }}</td>
+						<td>{{ application.status }}</td>
+						<td>{{ application.resume_version }}</td>
+						<td>{{ 'Yes' if application.cover_letter_sent else 'No' }}</td>
+						<td><pre>{{ application.interview_data }}</pre></td>
+						<td>
+							<div class="actions">
+								<form action="{{url_for('applications_update', application_id=application.application_id) }}" method="post">
+									<input name="job_id" type="number" value="{{ application.job_id }}" required>
+									<input name="application_date" type="date" value="{{ application.application_date }}" required>
+									<select name="status">
+										{% for option in ['Applied', 'Screening', 'Interview', 'Offer', 'Rejected', 'Withdrawn'] %}
+											<option value="{{ option }}" {% if application.status == option %}selected{% endif %}>{{ option }}</option>
+										{% endfor %}
+									</select>
+									<input name="resume_version" type="text" value="{{ application.resume_version or '' }}">
+									<select name="cover_letter_sent">
+										<option value="1" {% if application.cover_letter_sent %}selected{% endif %}>Yes</option>
+										<option value="0" {% if not application.cover_letter_sent %}selected{% endif %}>No</option>
+									</select>
+									<textarea name="interview_data" rows="2">{{ application.interview_data or '' }}</textarea>
+									<button type="submit">Save</button>
+								</form>
+
+								<form action="{{url_for('applications_delete', application_id=application.application_id) }}" method="post" onsubmit="return confirm('Delete this application?');">
+									<button type="submit" class="danger">Delete</button>
+								</form>
+							</div>
+						</td>
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	{% else %}
+		<p class="empty">No applications found yet. Add your first application above.</p>
+	{% endif %}
+</section>
+{% endblock %}

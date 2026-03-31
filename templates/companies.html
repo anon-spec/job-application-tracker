@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Companies{% endblock %}
+
+{% block content %}
+
+<!--CRUD companies page
+Create/Read/Update/Delete companies from dataset
+-->
+
+<h1>Companies</h1>
+
+<section class="card">
+    <h2>Add Company</h2>
+    <form action="{{ url_for('companies_create') }}" method="post">
+        <div class="row">
+            <div>
+                <label for="create-company-name">Company Name</label>
+                <input id="create-company-name" name="company_name" type="text" placeholder="ABC Industries" maxlength="100" required>
+            </div>
+            <div>
+                <label for="create-industry">Industry</label>
+                <input id="create-industry" name="industry" type="text" placeholder="Engineering" maxlength="50">
+            </div>
+            <div>
+                <label for="create-website">Website</label>
+                <input id="create-website" name="website" type="url" placeholder="www.123.com" maxlength="200">
+            </div>
+        </div>
+
+        <div class="row">
+            <div>
+                <label for="create-city">City</label>
+                <input id="create-city" name="city" type="text" placeholder="New York City" maxlength="50">
+            </div>
+            <div>
+                <label for="create-state">State</label>
+                <input id="create-state" name="state" type="text" placeholder="New York" maxlength="50">
+            </div>
+            <div>
+                <label for="create-notes">Notes</label>
+                <input id="create-notes" name="notes" type="text" placeholder="Notes">
+            </div>
+        </div>
+
+        <button type="submit">Add Company</button>
+    </form>
+</section>
+
+<section>
+    <h2>Companies</h2>
+
+    {% if companies %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Company Name</th>
+                    <th>Industry</th>
+                    <th>Website</th>
+                    <th>City</th>
+                    <th>State</th>
+                    <th>notes</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for company in companies %}
+                    <tr>
+                        <td>{{ company.company_name }}</td>
+                        <td>{{ company.industry }}</td>
+                        <td>{{ company.website }}</td>
+                        <td>{{ company.city }}</td>
+                        <td>{{ company.state }}</td>
+                        <td>{{ company.notes }}</td>
+                        <td>
+                            <div class="actions">
+                                <form action="{{url_for('companies_update', company_id=company.company_id) }}" method="post">
+                                    <input name="company_name" type="text" value="{{ company.company_name }}" required>
+                                    <input name="industry" type="text" value="{{ company.industry }}">
+                                    <input name="website" type="url" value="{{ company.website }}">
+                                    <input name="city" type="text" value="{{ company.city }}">
+                                    <input name="state" type="text" value="{{ company.state }}">
+                                    <input name="notes" type="text" value="{{ company.notes }}">
+                                    <button type="submit">Save</button>
+                                </form>
+
+                                <form action="{{url_for('companies_delete', company_id=company.company_id) }}" method="post" onsubmit="return confirm('Delete this company?');">
+                                    <button type="submit" class="danger">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="empty">No companies found yet. Add your first company above.</p>
+    {% endif %}
+</section>
+{% endblock %}

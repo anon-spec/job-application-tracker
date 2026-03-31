@@ -3,7 +3,7 @@ CREATE DATABASE IF NOT EXISTS job_application_tracker;
 USE job_application_tracker;
 
 -- Companies
-CREATE TABLE companies(
+CREATE TABLE IF NOT EXISTS companies(
 company_id INT PRIMARY KEY AUTO_INCREMENT,
 company_name VARCHAR(100) NOT NULL,
 industry VARCHAR(50),
@@ -14,7 +14,7 @@ notes TEXT
 );
 
 -- jobs
-CREATE TABLE jobs(
+CREATE TABLE IF NOT EXISTS jobs(
 job_id INT PRIMARY KEY AUTO_INCREMENT,
 company_id INT,
 job_title VARCHAR(100) NOT NULL,
@@ -27,7 +27,7 @@ FOREIGN KEY (company_id) REFERENCES companies(company_id)
 );
 
 -- applications
-CREATE TABLE applications(
+CREATE TABLE IF NOT EXISTS applications(
 application_id INT PRIMARY KEY AUTO_INCREMENT,
 job_id INT,
 application_date DATE NOT NULL,
@@ -39,7 +39,7 @@ FOREIGN KEY (job_id) REFERENCES jobs(job_id)
 );
 
 -- contacts
-CREATE TABLE contacts(
+CREATE TABLE IF NOT EXISTS contacts(
 contact_id INT PRIMARY KEY AUTO_INCREMENT,
 company_id INT,
 contact_name VARCHAR(100) NOT NULL,
@@ -53,7 +53,7 @@ FOREIGN KEY (company_id) REFERENCES companies(company_id)
 
 -- COMPANIES
 -- create
-INSERT INTO companies (company_name, industry, website, city, state)
+INSERT IGNORE INTO companies (company_name, industry, website, city, state)
 VALUES
 ('Tech Solutions Inc', 'Technology', 'www.techsolutions.com', 'Miami', 'Florida'),
 ('Data Analytics Corp', 'Data Science', 'www.dataanalytics.com', 'Austin', 'Texas'),
@@ -64,6 +64,7 @@ VALUES
 
 
 -- read
+/*
 SELECT * FROM companies;
 SELECT * FROM companies WHERE company_id = %s;
 
@@ -71,11 +72,11 @@ SELECT * FROM companies WHERE company_id = %s;
 UPDATE companies SET company_name = %s, industry = %s, website = %s, city = %s, state = %s, notes = %s WHERE company_id = %s;
 
 -- delete
-DELETE FROM companies WHERE company_id = %s;
+DELETE FROM companies WHERE company_id = %s;*/
 
 -- JOBS
 -- create
-INSERT INTO jobs (company_id, job_title, job_type, salary_min, salary_max, date_posted)
+INSERT IGNORE INTO jobs (company_id, job_title, job_type, salary_min, salary_max, date_posted)
 VALUES
 (1, 'Software Developer', 'Internship', 70000, 90000, '2025-01-15'),
 (1, 'Database Administrator', 'Full-time', 75000, 95000, '2025-01-10'),
@@ -86,19 +87,19 @@ VALUES
 (5, 'ML Engineer', 'Full-time', 90000, 115000, '2025-01-11');
 
 -- read
-SELECT * FROM jobs;
+/*SELECT * FROM jobs;
 SELECT * FROM jobs WHERE job_id = %s;
 
 -- update
 UPDATE jobs SET company_id = %s, job_title = %s, job_type = %s, salary_min = %s, salary_max = %s, job_url = %s, date_posted = %s WHERE job_id = %s;
 
 -- delete
-DELETE FROM jobs WHERE job_id = %s;
+DELETE FROM jobs WHERE job_id = %s;*/
 
 
 -- APPLICATIONS
 -- create
-INSERT INTO applications (job_id, application_date, status, resume_version, cover_letter_sent) 
+INSERT IGNORE INTO applications (job_id, application_date, status, resume_version, cover_letter_sent) 
 VALUES
 (1, '2025-01-16', 'Applied', 'v2.1', TRUE),
 (3, '2025-01-13', 'Interview', 'v2.1', TRUE),
@@ -108,18 +109,18 @@ VALUES
 
 
 -- read
-SELECT * FROM applications;
+/*SELECT * FROM applications;
 SELECT * FROM applications WHERE application_id = %s;
 
 -- update
 UPDATE applications SET job_id = %s, application_date = %s, status = %s, resume_version = %s, cover_letter_sent = %s, interview_data = %s WHERE application_id = %s;
 
 -- delete
-DELETE FROM applications WHERE application_id = %s;
+DELETE FROM applications WHERE application_id = %s;*/
 
 -- CONTACTS
 -- create
-INSERT INTO contacts (company_id, contact_name, email, title) 
+INSERT IGNORE INTO contacts (company_id, contact_name, email, title) 
 VALUES
 (1, 'Sarah Johnson', 'sjohnson@techsolutions.com', 'HR Manager'),
 (2, 'Michael Chen', 'mchen@dataanalytics.com', 'Technical Recruiter'),
@@ -128,7 +129,7 @@ VALUES
 (5, 'Lisa Garcia', 'lgarcia@smarttech.com', 'Talent Acquisition');
 
 
--- read
+/*-- read
 SELECT * FROM contacts;
 SELECT * FROM contacts WHERE contact_id = %s;
 
@@ -137,5 +138,5 @@ UPDATE contacts SET company_id = %s, contact_name= %s, title = %s, email = %s, p
 
 -- delete
 DELETE FROM contacts WHERE contact_id = %s;
-
+*/
 SHOW Tables;

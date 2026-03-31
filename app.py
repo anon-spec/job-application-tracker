@@ -1,13 +1,50 @@
 from flask import Flask, render_template, redirect, request, url_for
-import mysql.connector
+from database import get_db
 
 app = Flask(__name__)
 
-def get_db():
-    return mysql.connector.connect(
-        host ='localhost', user='root',
-        password='YOUR_PASSWORD', database = 'job_application_tracker'
-    )
+
+def normalize_url(value):
+    if not value:
+        return value
+    value = value.strip()
+    if not value:
+        return value
+    if value.startswith("www."):
+        return "https://" + value
+    if "://" not in value:
+        return "https://" + value
+    return value
+
+
+def validate_linkedin_url(url):
+    """
+    Validate LinkedIn URL format.
+    Returns tuple (is_valid, error_message)
+    """
+    if not url:
+        return True, None  # Optional field
+    
+    url = url.strip().lower()
+    
+    # Must contain linkedin.com
+    if "linkedin.com" not in url:
+        return False, "LinkedIn URL must contain 'linkedin.com'"
+    
+    # Must have /in/ or /company/ path
+    if "/in/" not in url and "/company/" not in url:
+        return False, "LinkedIn URL must contain '/in/' or '/company/' path"
+    
+    # Must have content after /in/ or /company/
+    if "/in/" in url:
+        after_path = url.split("/in/")[1].split("/")[0]
+    else:
+        after_path = url.split("/company/")[1].split("/")[0]
+    
+    if not after_path or not after_path.strip():
+        return False, "LinkedIn URL must have a username or company name after /in/ or /company/"
+    
+    return True, None
 
 
 @app.route('/')
@@ -32,6 +69,9 @@ def companies_create():
     state = request.form.get("state")
     notes = request.form.get("notes")
 
+    website = normalize_url(website)
+
+
     connection = get_db()
     cursor = connection.cursor()
     cursor.execute(
@@ -44,7 +84,7 @@ def companies_create():
     connection.commit()
     cursor.close()
     connection.close()
-    return redirect(url_for("companies_list"))
+    return redirect(url_for("companies_read"))
 
 #Read
 @app.route("/companies", methods=["GET"])
@@ -66,6 +106,7 @@ def companies_update(company_id):
     city = request.form.get("city")
     state = request.form.get("state")
     notes = request.form.get("notes")
+    website = normalize_url(website)
 
     connection = get_db()
     cursor = connection.cursor()
@@ -80,7 +121,7 @@ def companies_update(company_id):
     connection.commit()
     cursor.close()
     connection.close()
-    return redirect(url_for("companies_list"))
+    return redirect(url_for("companies_read"))
 
 
 #Delete
@@ -92,13 +133,13 @@ def companies_delete(company_id):
     connection.commit()
     cursor.close()
     connection.close()
-    return redirect(url_for("companies_list"))
+    return redirect(url_for("companies_read"))
 
 #JOBS
 #Create
 @app.route("/jobs/create", methods=["POST"])
 def jobs_create():
-    company_id = request.form["company_id"]
+    company_id = request.form.get("company_id")
     job_title = request.form.get("job_title")
     job_type = request.form.get("job_type")
     salary_min = request.form.get("salary_min")
@@ -106,6 +147,7 @@ def jobs_create():
     job_url = request.form.get("job_url")
     date_posted = request.form.get("date_posted")
     requirements = request.form.get("requirements")
+    job_url = normalize_url(job_url)
     
     connection = get_db()
     cursor = connection.cursor()
@@ -119,7 +161,7 @@ def jobs_create():
     connection.commit()
     cursor.close()
     connection.close()
-    return redirect(url_for("jobs_list"))
+    return redirect(url_for("jobs_read"))
 
 #Read
 @app.route("/jobs", methods=["GET"])
@@ -135,7 +177,7 @@ def jobs_read():
 #Update
 @app.route("/jobs/<int:job_id>/update", methods=["POST"])
 def jobs_update(job_id):
-    company_id = request.form["company_id"]
+    company_id = request.form.get("company_id")
     job_title = request.form.get("job_title")
     job_type = request.form.get("job_type")
     salary_min = request.form.get("salary_min")
@@ -143,6 +185,7 @@ def jobs_update(job_id):
     job_url = request.form.get("job_url")
     date_posted = request.form.get("date_posted")
     requirements = request.form.get("requirements")
+    job_url = normalize_url(job_url)
 
     connection = get_db()
     cursor = connection.cursor()
@@ -157,7 +200,7 @@ def jobs_update(job_id):
     connection.commit()
     cursor.close()
     connection.close()
-    return redirect(url_for("jobs_list"))
+    return redirect(url_for("jobs_read"))
 
 
 #Delete
@@ -169,13 +212,13 @@ def jobs_delete(job_id):
     connection.commit()
     cursor.close()
     connection.close()
-    return redirect(url_for("jobs_list"))
+    return redirect(url_for("jobs_read"))
 
 #APPLICATIONS
 #Create
 @app.route("/applications/create", methods=["POST"])
 def applications_create():
-    job_id = request.form["job_id"]
+    job_id = request.form.get("job_id")
     application_date = request.form.get("application_date")
     status = request.form.get("status")
     resume_version = request.form.get("resume_version")
@@ -194,7 +237,7 @@ def applications_create():
     connection.commit()
     cursor.close()
     connection.close()
-    return redirect(url_for("applications_list"))
+    return redirect(url_for("applications_read"))
 
 #Read
 @app.route("/applications", methods=["GET"])
@@ -210,7 +253,7 @@ def applications_read():
 #Update
 @app.route("/applications/<int:application_id>/update", methods=["POST"])
 def applications_update(application_id):
-    job_id = request.form["job_id"]
+    job_id = request.form.get("job_id")
     application_date = request.form.get("application_date")
     status = request.form.get("status")
     resume_version = request.form.get("resume_version")
@@ -230,7 +273,7 @@ def applications_update(application_id):
     connection.commit()
     cursor.close()
     connection.close()
-    return redirect(url_for("applications_list"))
+    return redirect(url_for("applications_read"))
 
 
 #Delete
@@ -242,32 +285,46 @@ def applications_delete(application_id):
     connection.commit()
     cursor.close()
     connection.close()
-    return redirect(url_for("applications_list"))
+    return redirect(url_for("applications_read"))
 
 #CONTACTS
 #Create
 @app.route("/contacts/create", methods=["POST"])
 def contacts_create():
-    company_id = request.form["company_id"]
+    company_id = request.form.get("company_id")
     contact_name = request.form.get("contact_name")
     title = request.form.get("title")
     email = request.form.get("email")
     phone = request.form.get("phone")
     linkedin_url = request.form.get("linkedin_url")
+    notes = request.form.get("notes")
+    linkedin_url = normalize_url(linkedin_url)
+    
+    # Validate LinkedIn URL
+    is_valid, error_msg = validate_linkedin_url(linkedin_url)
+    if not is_valid:
+        # Get all contacts to re-render the form
+        connection = get_db()
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM contacts ORDER BY contact_id DESC")
+        contacts = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        return render_template("contacts.html", contacts=contacts, error=error_msg)
     
     connection = get_db()
     cursor = connection.cursor()
     cursor.execute(
         '''
-        INSERT INTO contacts (company_id, contact_name, title, email, phone, linkedin_url)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        INSERT INTO contacts (company_id, contact_name, title, email, phone, linkedin_url, notes)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         ''',
-        (company_id, contact_name, title, email, phone, linkedin_url)
+        (company_id, contact_name, title, email, phone, linkedin_url, notes)
         )
     connection.commit()
     cursor.close()
     connection.close()
-    return redirect(url_for("contacts_list"))
+    return redirect(url_for("contacts_read"))
 
 #Read
 @app.route("/contacts", methods=["GET"])
@@ -282,28 +339,42 @@ def contacts_read():
 
 #Update
 @app.route("/contacts/<int:contact_id>/update", methods=["POST"])
-def contatcs_update(contact_id):
-    company_id = request.form["company_id"]
+def contacts_update(contact_id):
+    company_id = request.form.get("company_id")
     contact_name = request.form.get("contact_name")
     title = request.form.get("title")
     email = request.form.get("email")
     phone = request.form.get("phone")
     linkedin_url = request.form.get("linkedin_url")
+    notes = request.form.get("notes")
+    linkedin_url = normalize_url(linkedin_url)
+    
+    # Validate LinkedIn URL
+    is_valid, error_msg = validate_linkedin_url(linkedin_url)
+    if not is_valid:
+        # Get all contacts to re-render the form
+        connection = get_db()
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM contacts ORDER BY contact_id DESC")
+        contacts = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        return render_template("contacts.html", contacts=contacts, error=error_msg)
 
     connection = get_db()
     cursor = connection.cursor()
     cursor.execute(
         """
         UPDATE contacts
-        SET company_id=%s, contact_name=%s, title=%s, email=%s, phone=%s, linkedin_url=%s
+        SET company_id=%s, contact_name=%s, title=%s, email=%s, phone=%s, linkedin_url=%s, notes=%s
         WHERE contact_id=%s
         """,
-        (company_id, contact_name, title, email, phone, linkedin_url, contact_id)
+        (company_id, contact_name, title, email, phone, linkedin_url, notes, contact_id)
     )
     connection.commit()
     cursor.close()
     connection.close()
-    return redirect(url_for("contacts_list"))
+    return redirect(url_for("contacts_read"))
 
 
 #Delete
@@ -315,7 +386,7 @@ def contacts_delete(contact_id):
     connection.commit()
     cursor.close()
     connection.close()
-    return redirect(url_for("contacts_list"))
+    return redirect(url_for("contacts_read"))
 
 if __name__ == '__main__':
     app.run(debug=True)

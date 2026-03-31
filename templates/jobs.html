@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Jobs{% endblock %}
+
+{% block content %}
+
+<!--CRUD jobs page
+Create/Read/Update/Delete jobs from dataset
+-->
+
+<h1>Jobs</h1>
+
+<section class="card">
+	<h2>Add Job</h2>
+	<form action="{{ url_for('jobs_create') }}" method="post">
+		<div class="row">
+			<div>
+				<label for="create-company-id">Company ID</label>
+				<input id="create-company-id" name="company_id" type="number" required>
+			</div>
+			<div>
+				<label for="create-job-title">Job Title</label>
+				<input id="create-job-title" name="job_title" type="text" maxlength="100" required>
+			</div>
+			<div>
+				<label for="create-job-type">Job Type</label>
+				<select id="create-job-type" name="job_type">
+					<option value="Full-time">Full-time</option>
+					<option value="Part-time">Part-time</option>
+					<option value="Contract">Contract</option>
+					<option value="Internship">Internship</option>
+				</select>
+			</div>
+		</div>
+
+		<div class="row">
+			<div>
+				<label for="create-salary-min">Salary Min</label>
+				<input id="create-salary-min" name="salary_min" type="number" min="0">
+			</div>
+			<div>
+				<label for="create-salary-max">Salary Max</label>
+				<input id="create-salary-max" name="salary_max" type="number" min="0">
+			</div>
+			<div>
+				<label for="create-date-posted">Date Posted</label>
+				<input id="create-date-posted" name="date_posted" type="date">
+			</div>
+		</div>
+
+		<div class="row">
+			<div>
+				<label for="create-job-url">Job URL</label>
+				<input id="create-job-url" name="job_url" type="url" maxlength="300">
+			</div>
+			<div>
+				<label for="create-requirements">Requirements (JSON)</label>
+				<input id="create-requirements" name="requirements" type="text" placeholder='{"skills":["python"]}'>
+			</div>
+			<div>
+				<label>&nbsp;</label>
+				<button type="submit">Add Job</button>
+			</div>
+		</div>
+	</form>
+</section>
+
+<section>
+	<h2>Job Listings</h2>
+	{% if jobs %}
+		<table>
+			<thead>
+				<tr>
+					<th>ID</th>
+					<th>Company ID</th>
+					<th>Title</th>
+					<th>Type</th>
+					<th>Salary</th>
+					<th>Date Posted</th>
+					<th>URL</th>
+					<th>Requirements</th>
+					<th>Actions</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for job in jobs %}
+					<tr>
+						<td>{{ job.job_id }}</td>
+						<td>{{ job.company_id }}</td>
+						<td>{{ job.job_title }}</td>
+						<td>{{ job.job_type }}</td>
+						<td>{{ job.salary_min }} - {{ job.salary_max }}</td>
+						<td>{{ job.date_posted }}</td>
+						<td>{{ job.job_url }}</td>
+						<td>{{ job.requirements }}</td>
+						<td>
+							<div class="actions">
+								<form action="{{ url_for('jobs_update', job_id=job.job_id) }}" method="post">
+									<input name="company_id" type="number" value="{{ job.company_id }}" required>
+									<input name="job_title" type="text" value="{{ job.job_title }}" required>
+									<select name="job_type">
+										{% for option in ['Full-time', 'Part-time', 'Contract', 'Internship'] %}
+											<option value="{{ option }}" {% if job.job_type == option %}selected{% endif %}>{{ option }}</option>
+										{% endfor %}
+									</select>
+									<input name="salary_min" type="number" value="{{ job.salary_min or '' }}" min="0">
+									<input name="salary_max" type="number" value="{{ job.salary_max or '' }}" min="0">
+									<input name="job_url" type="url" value="{{ job.job_url or '' }}">
+									<input name="date_posted" type="date" value="{{ job.date_posted or '' }}">
+									<input name="requirements" type="text" value="{{ job.requirements or '' }}">
+									<button type="submit">Save</button>
+								</form>
+
+								<form action="{{ url_for('jobs_delete', job_id=job.job_id) }}" method="post" onsubmit="return confirm('Delete this job?');">
+									<button type="submit" class="danger">Delete</button>
+								</form>
+							</div>
+						</td>
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	{% else %}
+		<p class="empty">No jobs found yet. Add your first job above.</p>
+	{% endif %}
+</section>
+{% endblock %}

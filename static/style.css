@@ -1,0 +1,126 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+
+body {
+			font-family: Arial, sans-serif;
+			margin: 24px;
+			background: #f7f8fa;
+			color: #1f2937;
+		}
+
+		h1, h2 {
+			margin-bottom: 10px;
+		}
+
+		.card {
+			background: #fff;
+			border: 1px solid #e5e7eb;
+			border-radius: 10px;
+			padding: 16px;
+			margin-bottom: 20px;
+		}
+
+		form {
+			display: grid;
+			gap: 10px;
+		}
+
+		.row {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 10px;
+		}
+
+		label {
+			font-size: 0.9rem;
+			font-weight: 600;
+			display: block;
+			margin-bottom: 4px;
+		}
+
+		input, select, textarea, button {
+			width: 100%;
+			padding: 8px;
+			border: 1px solid #d1d5db;
+			border-radius: 6px;
+			font-size: 0.95rem;
+		}
+
+		button {
+			cursor: pointer;
+			border: none;
+			background: #2563eb;
+			color: #fff;
+			font-weight: 600;
+		}
+
+		button:hover {
+			background: #1d4ed8;
+		}
+
+		.danger {
+			background: #dc2626;
+		}
+
+		.danger:hover {
+			background: #b91c1c;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			background: #fff;
+			border: 1px solid #e5e7eb;
+			border-radius: 10px;
+			overflow: hidden;
+		}
+
+		th, td {
+			border-bottom: 1px solid #e5e7eb;
+			padding: 10px;
+			text-align: left;
+			vertical-align: top;
+		}
+
+		th {
+			background: #f3f4f6;
+		}
+
+		.actions {
+			display: grid;
+			gap: 8px;
+			min-width: 160px;
+		}
+
+		.empty {
+			padding: 14px;
+			background: #fff;
+			border: 1px dashed #cbd5e1;
+			border-radius: 10px;
+		}
+
+		@media (max-width: 900px) {
+			.row {
+				grid-template-columns: 1fr;
+			}
+
+			table, thead, tbody, th, td, tr {
+				display: block;
+			}
+
+			thead {
+				display: none;
+			}
+
+			tr {
+				margin-bottom: 12px;
+				border: 1px solid #e5e7eb;
+				border-radius: 10px;
+				overflow: hidden;
+				background: #fff;
+			}
+
+			td {
+				border: none;
+				border-bottom: 1px solid #f3f4f6;
+			}
+		}

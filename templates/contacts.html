@@ -1,0 +1,107 @@
+
+
+{% extends "base.html" %}
+
+{% block title %}Contacts{% endblock %}
+
+{% block content %}
+
+<!--CRUD contacts page
+Create/Read/Update/Delete contacts from dataset
+-->
+
+<h1>Contacts</h1>
+
+<section class="card">
+    <h2>Add Contact</h2>
+    <form action="{{ url_for('contacts_create') }}" method="post">
+        <div class="row">
+            <div>
+                <label for="create-company-id">Company ID</label>
+                <input id="create-company-id" name="company_id" type="number" placeholder="e.g. 1" required>
+            </div>
+            <div>
+                <label for="create-contact-name">Contact</label>
+                <input id="create-contact-name" name="contact_name" type="text" placeholder="Jane Doe" maxlength="100" required>
+            </div>
+            <div>
+                <label for="create-title">Title</label>
+                <input id="create-title" name="title" type="text" placeholder="Interviewer" maxlength="100">
+            </div>
+        </div>
+
+        <div class="row">
+            <div>
+                <label for="create-email">Email</label>
+                <input id="create-email" name="email" type="email" placeholder="janedoe@industry.com" maxlength="100">
+            </div>
+            <div>
+                <label for="create-linkedin-url">LinkedIn URL</label>
+                <input id="create-linkedin-url" name="linkedin_url" type="url" placeholder="www.linkedin.com/janedoe" maxlength="200" data-url-type="linkedin">
+                <span class="error-message" style="color: red; display: none; font-size: 0.9em;"></span>
+            </div>
+            <div>
+                <label for="create-notes">Notes</label>
+                <input id="create-notes" name="notes" type="text" placeholder="Notes">
+            </div>
+        </div>
+
+        <button type="submit">Add Contact</button>
+    </form>
+</section>
+
+<section>
+    <h2>Contacts</h2>
+
+    {% if contacts %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Company ID</th>
+                    <th>Contact Name</th>
+                    <th>Title</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>LinkedIn URL</th>
+                    <th>notes</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contact in contacts %}
+                    <tr>
+                        <td>{{ contact.company_id }}</td>
+                        <td>{{ contact.contact_name }}</td>
+                        <td>{{ contact.title }}</td>
+                        <td>{{ contact.email }}</td>
+                        <td>{{ contact.phone }}</td>
+                        <td>{{ contact.linkedin_url }}</td>
+                        <td>{{ contact.notes }}</td>
+                        <td>
+                            <div class="actions">
+                                
+                                <form action="{{url_for('contacts_update', contact_id=contact.contact_id) }}" method="post">
+                                    <input name="company_id" type="number" value="{{ contact.company_id }}" required>
+                                    <input name="contact_name" type="text" value="{{ contact.contact_name }}">
+                                    <input name="title" type="text" value="{{ contact.title }}">
+                                    <input name="email" type="email" value="{{ contact.email }}">
+                                    <input name="phone" type="tel" value="{{ contact.phone }}">
+                                    <input name="linkedin_url" type="url" value="{{ contact.linkedin_url }}" data-url-type="linkedin">
+                                    <input name="notes" type="text" value="{{ contact.notes }}">
+                                    <button type="submit">Save</button>
+                                </form>
+
+                                <form action="{{url_for('contacts_delete', contact_id=contact.contact_id) }}" method="post" onsubmit="return confirm('Delete this contact?');">
+                                    <button type="submit" class="danger">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="empty">No contacts found yet. Add your first contact above.</p>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,98 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>{% block title %}Job Application Tracker{% endblock %}</title>
+	<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+	<main class="container">
+		<nav style="margin-bottom: 20px; display: flex; gap: 8px; flex-wrap: wrap;">
+			<a href="{{ url_for('dashboard') }}">Dashboard</a>
+			<a href="{{ url_for('companies_read') }}">Companies</a>
+			<a href="{{ url_for('jobs_read') }}">Jobs</a>
+			<a href="{{ url_for('applications_read') }}">Applications</a>
+			<a href="{{ url_for('contacts_read') }}">Contacts</a>
+		</nav>
+
+		{% block content %}{% endblock %}
+	</main>
+	<script>
+		(function () {
+            //<!--Fixes URL in cases where user does not input https link-->
+			function normalizeUrl(value) {
+				if (!value) return value;
+				var trimmed = value.trim();
+				if (!trimmed) return trimmed;
+				if (trimmed.startsWith("www.")) return "https://" + trimmed;
+				if (!trimmed.includes("://")) return "https://" + trimmed;
+				return trimmed;
+			}
+
+			function validateLinkedInUrl(url) {
+				if (!url) return true; 
+				var normalized = normalizeUrl(url).toLowerCase();
+				if (!normalized.includes("linkedin.com")) {
+					return false;
+				}
+				if (!normalized.includes("/in/") && !normalized.includes("/company/")) {
+					return false;
+				}
+				var pathIndex = Math.max(normalized.indexOf("/in/"), normalized.indexOf("/company/"));
+				var afterPath = normalized.substring(pathIndex).split("/")[2];
+				if (!afterPath || afterPath.trim() === "") {
+					return false;
+				}
+				return true;
+			}
+
+			function normalizeInput(input) {
+				input.value = normalizeUrl(input.value);
+			}
+
+			function showLinkedInError(input, message) {
+				var errorSpan = input.parentElement.querySelector(".error-message");
+				if (errorSpan) {
+					if (message) {
+						errorSpan.textContent = message;
+						errorSpan.style.display = "block";
+					} else {
+						errorSpan.style.display = "none";
+					}
+				}
+			}
+
+			document.querySelectorAll('input[type="url"]').forEach(function (input) {
+				input.addEventListener("blur", function () {
+					normalizeInput(input);
+					if (input.dataset.urlType === "linkedin") {
+						if (!validateLinkedInUrl(input.value)) {
+							showLinkedInError(input, "Invalid LinkedIn URL. Must be https://linkedin.com/in/username or /company/name");
+						} else {
+							showLinkedInError(input, "");
+						}
+					}
+				});
+			});
+
+			document.querySelectorAll("form").forEach(function (form) {
+				form.addEventListener("submit", function (e) {
+					var isValid = true;
+					form.querySelectorAll('input[type="url"][data-url-type="linkedin"]').forEach(function (input) {
+						normalizeInput(input);
+						if (!validateLinkedInUrl(input.value)) {
+							showLinkedInError(input, "Invalid LinkedIn URL. Must be https://linkedin.com/in/username or /company/name");
+							isValid = false;
+						}
+					});
+					if (!isValid) {
+						e.preventDefault();
+					}
+				});
+			});
+		})();
+	</script>
+</body>
+</html>

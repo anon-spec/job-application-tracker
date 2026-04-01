@@ -16,7 +16,8 @@ Create/Read/Update/Delete companies from dataset
         <div class="row">
             <div>
                 <label for="create-company-name">Company Name</label>
-                <input id="create-company-name" name="company_name" type="text" placeholder="ABC Industries" maxlength="100" required>
+                <input id="create-company-name" name="company_name" type="text" placeholder="ABC Industries" maxlength="100" data-field-label="Company name" required>
+                <span class="error-message" style="color: red; display: none; font-size: 0.9em;"></span>
             </div>
             <div>
                 <label for="create-industry">Industry</label>
@@ -74,17 +75,21 @@ Create/Read/Update/Delete companies from dataset
                         <td>{{ company.notes }}</td>
                         <td>
                             <div class="actions">
-                                <form action="{{url_for('companies_update', company_id=company.company_id) }}" method="post">
-                                    <input name="company_name" type="text" value="{{ company.company_name }}" required>
-                                    <input name="industry" type="text" value="{{ company.industry }}">
-                                    <input name="website" type="url" value="{{ company.website }}">
-                                    <input name="city" type="text" value="{{ company.city }}">
-                                    <input name="state" type="text" value="{{ company.state }}">
-                                    <input name="notes" type="text" value="{{ company.notes }}">
-                                    <button type="submit">Save</button>
-                                </form>
+                                <button
+                                    type="button"
+                                    class="open-edit-company"
+                                    data-company='{{ {
+                                        "company_id": company.company_id,
+                                        "company_name": company.company_name,
+                                        "industry": company.industry,
+                                        "website": company.website,
+                                        "city": company.city,
+                                        "state": company.state,
+                                        "notes": company.notes
+                                    } | tojson | forceescape }}'
+                                >Edit</button>
 
-                                <form action="{{url_for('companies_delete', company_id=company.company_id) }}" method="post" onsubmit="return confirm('Delete this company?');">
+                                <form action="{{url_for('companies_delete', company_id=company.company_id) }}" method="post" data-delete-form data-delete-message="Delete this company?">
                                     <button type="submit" class="danger">Delete</button>
                                 </form>
                             </div>
@@ -97,4 +102,72 @@ Create/Read/Update/Delete companies from dataset
         <p class="empty">No companies found yet. Add your first company above.</p>
     {% endif %}
 </section>
+
+<dialog id="company-edit-modal" class="edit-modal">
+    <h2>Edit Company</h2>
+    <form id="company-edit-form" method="post">
+        <div>
+            <label for="edit-company-name">Company Name</label>
+            <input id="edit-company-name" name="company_name" type="text" maxlength="100" data-field-label="Company name" required>
+        </div>
+        <div>
+            <label for="edit-industry">Industry</label>
+            <input id="edit-industry" name="industry" type="text" maxlength="50">
+        </div>
+        <div>
+            <label for="edit-website">Website</label>
+            <input id="edit-website" name="website" type="url" maxlength="200">
+        </div>
+        <div>
+            <label for="edit-city">City</label>
+            <input id="edit-city" name="city" type="text" maxlength="50">
+        </div>
+        <div>
+            <label for="edit-state">State</label>
+            <input id="edit-state" name="state" type="text" maxlength="50">
+        </div>
+        <div>
+            <label for="edit-notes">Notes</label>
+            <input id="edit-notes" name="notes" type="text">
+        </div>
+        <div class="modal-actions">
+            <button type="submit">Save</button>
+            <button type="button" class="secondary" id="company-edit-cancel">Cancel</button>
+        </div>
+    </form>
+</dialog>
+
+<script>
+    (function () {
+        var modal = document.getElementById("company-edit-modal");
+        if (!modal) return;
+
+        var form = document.getElementById("company-edit-form");
+        var cancel = document.getElementById("company-edit-cancel");
+        var actionTemplate = "{{ url_for('companies_update', company_id=0) }}";
+
+        function setValue(id, value) {
+            var element = document.getElementById(id);
+            if (element) element.value = value || "";
+        }
+
+        document.querySelectorAll(".open-edit-company").forEach(function (button) {
+            button.addEventListener("click", function () {
+                var company = JSON.parse(button.dataset.company);
+                form.action = actionTemplate.replace("/0/update", "/" + company.company_id + "/update");
+                setValue("edit-company-name", company.company_name);
+                setValue("edit-industry", company.industry);
+                setValue("edit-website", company.website);
+                setValue("edit-city", company.city);
+                setValue("edit-state", company.state);
+                setValue("edit-notes", company.notes);
+                modal.showModal();
+            });
+        });
+
+        cancel.addEventListener("click", function () {
+            modal.close();
+        });
+    })();
+</script>
 {% endblock %}

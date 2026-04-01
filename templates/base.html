@@ -11,6 +11,7 @@
 	<main class="container">
 		<nav style="margin-bottom: 20px; display: flex; gap: 8px; flex-wrap: wrap;">
 			<a href="{{ url_for('dashboard') }}">Dashboard</a>
+			<a href="{{ url_for('job_match') }}">Job Match</a>
 			<a href="{{ url_for('companies_read') }}">Companies</a>
 			<a href="{{ url_for('jobs_read') }}">Jobs</a>
 			<a href="{{ url_for('applications_read') }}">Applications</a>
@@ -19,9 +20,21 @@
 
 		{% block content %}{% endblock %}
 	</main>
+
+	<!-- Delete Confirmation Modal -->
+	<dialog id="deleteConfirmDialog" class="edit-modal">
+		<div style="padding: 20px; text-align: center;">
+			<h3>Confirm Delete</h3>
+			<p id="deleteConfirmMessage">Are you sure you want to delete this item?</p>
+			<div class="modal-actions">
+				<button id="deleteConfirmCancel" class="secondary">Cancel</button>
+				<button id="deleteConfirmYes" class="danger">Delete</button>
+			</div>
+		</div>
+	</dialog>
 	<script>
 		(function () {
-            //<!--Fixes URL in cases where user does not input https link-->
+            //Fixes URL in cases where user does not input https link
 			function normalizeUrl(value) {
 				if (!value) return value;
 				var trimmed = value.trim();
@@ -52,44 +65,149 @@
 				input.value = normalizeUrl(input.value);
 			}
 
-			function showLinkedInError(input, message) {
-				var errorSpan = input.parentElement.querySelector(".error-message");
-				if (errorSpan) {
-					if (message) {
-						errorSpan.textContent = message;
-						errorSpan.style.display = "block";
-					} else {
-						errorSpan.style.display = "none";
-					}
+			// Finds (or creates) an inline error element for a specific field.
+			function getOrCreateErrorElement(input) {
+				var fieldKey = input.id || input.name || "field";
+				var selector = '.error-message[data-for="' + fieldKey + '"]';
+				var existing = input.parentElement.querySelector(selector);
+				if (existing) return existing;
+
+				var errorSpan = document.createElement("span");
+				errorSpan.className = "error-message";
+				errorSpan.setAttribute("data-for", fieldKey);
+				errorSpan.style.color = "red";
+				errorSpan.style.display = "none";
+				errorSpan.style.fontSize = "0.9em";
+
+				if (input.nextSibling) {
+					input.parentElement.insertBefore(errorSpan, input.nextSibling);
+				} else {
+					input.parentElement.appendChild(errorSpan);
+				}
+				return errorSpan;
+			}
+
+			function showFieldError(input, message) {
+				var errorSpan = getOrCreateErrorElement(input);
+				if (message) {
+					errorSpan.textContent = message;
+					errorSpan.style.display = "block";
+				} else {
+					errorSpan.style.display = "none";
 				}
 			}
 
+			function validateRequiredInput(input) {
+				if (!input.required) return true;
+				if ((input.value || "").trim()) {
+					showFieldError(input, "");
+					return true;
+				}
+				var label = input.dataset.fieldLabel || input.name || "This field";
+				showFieldError(input, label + " is required");
+				return false;
+			}
+
+
+			//Event Listener - Activates when user leaves field, shows error if URL is not valid
 			document.querySelectorAll('input[type="url"]').forEach(function (input) {
 				input.addEventListener("blur", function () {
 					normalizeInput(input);
+					//Extra check if url should be valid linkedin
 					if (input.dataset.urlType === "linkedin") {
 						if (!validateLinkedInUrl(input.value)) {
-							showLinkedInError(input, "Invalid LinkedIn URL. Must be https://linkedin.com/in/username or /company/name");
+							showFieldError(input, "Invalid LinkedIn URL. Must be https://linkedin.com/in/username or /company/name");
 						} else {
-							showLinkedInError(input, "");
+							showFieldError(input, "");
 						}
 					}
 				});
 			});
 
+			document.querySelectorAll('input[required], select[required], textarea[required]').forEach(function (input) {
+				input.addEventListener("blur", function () {
+					validateRequiredInput(input);
+				});
+			});
+
+			//Event listener - when user clicks submit, shows error if URL is not valid
 			document.querySelectorAll("form").forEach(function (form) {
 				form.addEventListener("submit", function (e) {
 					var isValid = true;
+					form.querySelectorAll('input[required], select[required], textarea[required]').forEach(function (input) {
+						if (!validateRequiredInput(input)) {
+							isValid = false;
+						}
+					});
 					form.querySelectorAll('input[type="url"][data-url-type="linkedin"]').forEach(function (input) {
 						normalizeInput(input);
 						if (!validateLinkedInUrl(input.value)) {
-							showLinkedInError(input, "Invalid LinkedIn URL. Must be https://linkedin.com/in/username or /company/name");
+							showFieldError(input, "Invalid LinkedIn URL. Must be https://linkedin.com/in/username or /company/name");
 							isValid = false;
 						}
 					});
 					if (!isValid) {
 						e.preventDefault();
 					}
+				});
+			});
+
+			// Close open dialog when user clicks outside the dialog panel.
+			document.querySelectorAll("dialog").forEach(function (dialog) {
+				var pointerDownInside = false;
+
+				dialog.addEventListener("mousedown", function (e) {
+					var rect = dialog.getBoundingClientRect();
+					pointerDownInside =
+						e.clientX >= rect.left &&
+						e.clientX <= rect.right &&
+						e.clientY >= rect.top &&
+						e.clientY <= rect.bottom;
+				});
+
+				dialog.addEventListener("click", function (e) {
+					var rect = dialog.getBoundingClientRect();
+					var clickedInside =
+						e.clientX >= rect.left &&
+						e.clientX <= rect.right &&
+						e.clientY >= rect.top &&
+						e.clientY <= rect.bottom;
+
+					// Only treat as backdrop close when both press and release are outside.
+					if (!pointerDownInside && !clickedInside) {
+						dialog.close();
+					}
+
+					pointerDownInside = false;
+				});
+			});
+
+			// Delete confirmation modal handler
+			var deleteConfirmDialog = document.getElementById("deleteConfirmDialog");
+			var deleteConfirmCancel = document.getElementById("deleteConfirmCancel");
+			var deleteConfirmYes = document.getElementById("deleteConfirmYes");
+			var pendingDeleteForm = null;
+
+			deleteConfirmCancel.addEventListener("click", function () {
+				deleteConfirmDialog.close();
+				pendingDeleteForm = null;
+			});
+
+			deleteConfirmYes.addEventListener("click", function () {
+				if (pendingDeleteForm) {
+					pendingDeleteForm.submit();
+				}
+				deleteConfirmDialog.close();
+			});
+
+			// Attach delete handler to all delete forms
+			document.querySelectorAll("form[data-delete-form]").forEach(function (form) {
+				form.addEventListener("submit", function (e) {
+					e.preventDefault();
+					var message = form.getAttribute("data-delete-message") || "Are you sure you want to delete this item?";
+					document.getElementById("deleteConfirmMessage").textContent = message;
+					pendingDeleteForm = form;
+					deleteConfirmDialog.showModal();
 				});
 			});
 		})();

@@ -1,9 +1,195 @@
+import json
+
 from flask import Flask, render_template, redirect, request, url_for
 from database import get_db
 
 app = Flask(__name__)
 
 
+def normalize_skill(value):
+    if not value:
+        return ""
+    return " ".join(str(value).strip().lower().split())
+
+#Parses skills for job_match function
+def parse_skills_csv(value):
+    if not value:
+        return []
+    seen = set()
+    skills = []
+    for item in str(value).split(","):
+        skill = normalize_skill(item)
+        if skill and skill not in seen:
+            seen.add(skill)
+            skills.append(skill)
+    return skills
+
+
+#Parses the requirements JSON object and normalizes to canonical shape
+def parse_requirements_value(value):
+    normalized_empty = {
+        "required_skills": [],
+        "preferred_skills": [],
+    }
+
+    if value is None:
+        return normalized_empty
+
+    if isinstance(value, list):
+        return {
+            "required_skills": parse_skills_csv(",".join(str(item) for item in value)),
+            "preferred_skills": [],
+        }
+
+    if isinstance(value, dict):
+        required_source = value.get("required_skills") or value.get("skills") or []
+        preferred_source = value.get("preferred_skills") or value.get("preffered_skills") or []
+
+        required_skills = parse_skills_csv(",".join(str(item) for item in required_source)) if isinstance(required_source, list) else parse_skills_csv(required_source)
+        preferred_skills = parse_skills_csv(",".join(str(item) for item in preferred_source)) if isinstance(preferred_source, list) else parse_skills_csv(preferred_source)
+
+        normalized = {
+            "required_skills": required_skills,
+            "preferred_skills": preferred_skills,
+        }
+
+        if "education" in value:
+            normalized["education"] = value.get("education")
+        if "experience_years" in value:
+            normalized["experience_years"] = value.get("experience_years")
+        if "remote_option" in value:
+            normalized["remote_option"] = value.get("remote_option")
+
+        return normalized
+
+    text = str(value).strip()
+    if not text:
+        return normalized_empty
+
+    try:
+        json_value = json.loads(text)
+        return parse_requirements_value(json_value)
+    except json.JSONDecodeError:
+        # Backward-compatible plain text input: treat as required skills.
+        return {
+            "required_skills": parse_skills_csv(text),
+            "preferred_skills": [],
+        }
+
+
+#job match function
+def compute_job_match(user_skills, required_skills, preferred_skills):
+    user_set = set(user_skills)
+    required_set = set(required_skills)
+    preferred_set = set(preferred_skills)
+
+    matched_required = sorted(user_set & required_set)
+    missing_required = sorted(required_set - user_set)
+    matched_preferred = sorted(user_set & preferred_set)
+
+    total_required = len(required_set)
+    total_preferred = len(preferred_set)
+
+    required_percent = round((len(matched_required) / total_required) * 100) if total_required else 0
+    preferred_percent = round((len(matched_preferred) / total_preferred) * 100) if total_preferred else 0
+
+    if total_required == 0 and total_preferred == 0:
+        final_percent = 0
+    elif total_required == 0:
+        final_percent = preferred_percent
+    elif total_preferred == 0:
+        final_percent = required_percent
+    else:
+        final_percent = round((required_percent * 0.8) + (preferred_percent * 0.2))
+
+    return {
+        "percent": final_percent,
+        "required_percent": required_percent,
+        "preferred_percent": preferred_percent,
+        "matched_required": matched_required,
+        "missing_required": missing_required,
+        "matched_preferred": matched_preferred,
+        "matched_required_count": len(matched_required),
+        "total_required": total_required,
+        "matched_preferred_count": len(matched_preferred),
+        "total_preferred": total_preferred,
+    }
+
+
+def format_requirements_for_form(requirements_value):
+    parsed = parse_requirements_value(requirements_value)
+    return json.dumps(parsed)
+
+
+def format_json_for_display(value):
+    if value is None:
+        return []
+
+    parsed = value
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return []
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            return [text]
+
+    if isinstance(parsed, dict):
+        lines = []
+        for key, item in parsed.items():
+            if isinstance(item, list):
+                item_text = ", ".join(str(x) for x in item) if item else "None"
+            elif isinstance(item, dict):
+                item_text = json.dumps(item)
+            else:
+                item_text = str(item)
+            lines.append(f"{key}: {item_text}")
+        return lines
+
+    if isinstance(parsed, list):
+        return [", ".join(str(x) for x in parsed)] if parsed else []
+
+    return [str(parsed)]
+
+
+def format_jobs_requirements_for_display(jobs):
+    for job in jobs:
+        job["requirements"] = format_requirements_for_form(job.get("requirements"))
+        job["requirements_lines"] = format_json_for_display(job.get("requirements"))
+    return jobs
+
+
+def format_applications_interview_data_for_display(applications):
+    for application in applications:
+        application["interview_data_lines"] = format_json_for_display(application.get("interview_data"))
+    return applications
+
+
+def render_jobs_page_with_error(error_message):
+    connection = get_db()
+    cursor = connection.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM jobs ORDER BY job_id ASC")
+    jobs = cursor.fetchall()
+    cursor.close()
+    connection.close()
+    jobs = format_jobs_requirements_for_display(jobs)
+    return render_template("jobs.html", jobs=jobs, error=error_message)
+
+
+def validate_requirements_payload(payload):
+    required_skills = payload.get("required_skills", [])
+    preferred_skills = payload.get("preferred_skills", [])
+
+    if not isinstance(required_skills, list) or not isinstance(preferred_skills, list):
+        raise ValueError("required_skills and preferred_skills must both be arrays")
+
+    if not required_skills:
+        raise ValueError("At least one required skill is needed")
+
+    return True
+
+#normalizes url by adding https:// in front of url if missing
 def normalize_url(value):
     if not value:
         return value
@@ -16,26 +202,19 @@ def normalize_url(value):
         return "https://" + value
     return value
 
-
+#For linkedin url input, function checks if linkedin link is valid. Returns tuple (is_valid, error_message)
 def validate_linkedin_url(url):
-    """
-    Validate LinkedIn URL format.
-    Returns tuple (is_valid, error_message)
-    """
     if not url:
-        return True, None  # Optional field
+        return True, None
     
     url = url.strip().lower()
     
-    # Must contain linkedin.com
     if "linkedin.com" not in url:
         return False, "LinkedIn URL must contain 'linkedin.com'"
     
-    # Must have /in/ or /company/ path
     if "/in/" not in url and "/company/" not in url:
         return False, "LinkedIn URL must contain '/in/' or '/company/' path"
     
-    # Must have content after /in/ or /company/
     if "/in/" in url:
         after_path = url.split("/in/")[1].split("/")[0]
     else:
@@ -55,6 +234,81 @@ def dashboard():
     stats = cursor.fetchone()
     connection.close()
     return render_template('dashboard.html', stats=stats)
+
+
+@app.route('/job-match', methods=["GET", "POST"])
+def job_match():
+    user_skills_input = ""
+    user_skills = []
+    matches = []
+
+    if request.method == "POST":
+        user_skills_input = request.form.get("skills", "")
+        user_skills = parse_skills_csv(user_skills_input)
+
+        connection = get_db()
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT
+                j.job_id,
+                j.job_title,
+                j.requirements,
+                c.company_name
+            FROM jobs j
+            LEFT JOIN companies c ON c.company_id = j.company_id
+            ORDER BY j.job_id ASC
+            """
+        )
+        jobs = cursor.fetchall()
+        cursor.close()
+        connection.close()
+
+        for job in jobs:
+            try:
+                requirements = parse_requirements_value(job.get("requirements"))
+            except ValueError:
+                requirements = {"required_skills": [], "preferred_skills": []}
+
+            score = compute_job_match(
+                user_skills,
+                requirements.get("required_skills", []),
+                requirements.get("preferred_skills", []),
+            )
+            matches.append(
+                {
+                    "job_id": job["job_id"],
+                    "job_title": job["job_title"],
+                    "company_name": job.get("company_name") or "Unknown Company",
+                    "percent": score["percent"],
+                    "required_percent": score["required_percent"],
+                    "preferred_percent": score["preferred_percent"],
+                    "matched_required_count": score["matched_required_count"],
+                    "total_required": score["total_required"],
+                    "matched_preferred_count": score["matched_preferred_count"],
+                    "total_preferred": score["total_preferred"],
+                    "matched_required_skills": score["matched_required"],
+                    "missing_required_skills": score["missing_required"],
+                    "matched_preferred_skills": score["matched_preferred"],
+                }
+            )
+
+        matches.sort(
+            key=lambda m: (
+                m["percent"],
+                m["matched_required_count"],
+                -m["total_required"],
+                m["job_title"].lower(),
+            ),
+            reverse=True,
+        )
+
+    return render_template(
+        "job_match.html",
+        user_skills_input=user_skills_input,
+        user_skills=user_skills,
+        matches=matches,
+    )
 
 
 
@@ -91,7 +345,7 @@ def companies_create():
 def companies_read():
     connection = get_db()
     cursor = connection.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM companies ORDER BY company_id DESC")
+    cursor.execute("SELECT * FROM companies ORDER BY company_id ASC")
     companies = cursor.fetchall()
     cursor.close()
     connection.close()
@@ -148,6 +402,13 @@ def jobs_create():
     date_posted = request.form.get("date_posted")
     requirements = request.form.get("requirements")
     job_url = normalize_url(job_url)
+    try:
+        requirements_payload = parse_requirements_value(requirements)
+        validate_requirements_payload(requirements_payload)
+    except ValueError as ex:
+        return render_jobs_page_with_error(str(ex))
+
+    requirements_json = json.dumps(requirements_payload)
     
     connection = get_db()
     cursor = connection.cursor()
@@ -156,7 +417,7 @@ def jobs_create():
         INSERT INTO jobs (company_id, job_title, job_type, salary_min, salary_max, job_url, date_posted, requirements)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         ''',
-        (company_id, job_title, job_type, salary_min, salary_max, job_url, date_posted, requirements)
+        (company_id, job_title, job_type, salary_min, salary_max, job_url, date_posted, requirements_json)
         )
     connection.commit()
     cursor.close()
@@ -168,10 +429,11 @@ def jobs_create():
 def jobs_read():
     connection = get_db()
     cursor = connection.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM jobs ORDER BY job_id DESC")
+    cursor.execute("SELECT * FROM jobs ORDER BY job_id ASC")
     jobs = cursor.fetchall()
     cursor.close()
     connection.close()
+    jobs = format_jobs_requirements_for_display(jobs)
     return render_template("jobs.html", jobs=jobs)
 
 #Update
@@ -186,6 +448,13 @@ def jobs_update(job_id):
     date_posted = request.form.get("date_posted")
     requirements = request.form.get("requirements")
     job_url = normalize_url(job_url)
+    try:
+        requirements_payload = parse_requirements_value(requirements)
+        validate_requirements_payload(requirements_payload)
+    except ValueError as ex:
+        return render_jobs_page_with_error(str(ex))
+
+    requirements_json = json.dumps(requirements_payload)
 
     connection = get_db()
     cursor = connection.cursor()
@@ -195,7 +464,7 @@ def jobs_update(job_id):
         SET company_id=%s, job_title=%s, job_type=%s, salary_min=%s, salary_max=%s, job_url=%s, date_posted=%s, requirements=%s
         WHERE job_id=%s
         """,
-        (company_id, job_title, job_type, salary_min, salary_max, job_url, date_posted, requirements, job_id)
+        (company_id, job_title, job_type, salary_min, salary_max, job_url, date_posted, requirements_json, job_id)
     )
     connection.commit()
     cursor.close()
@@ -244,10 +513,11 @@ def applications_create():
 def applications_read():
     connection = get_db()
     cursor = connection.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM applications ORDER BY application_id DESC")
+    cursor.execute("SELECT * FROM applications ORDER BY application_id ASC")
     applications = cursor.fetchall()
     cursor.close()
     connection.close()
+    applications = format_applications_interview_data_for_display(applications)
     return render_template("applications.html", applications=applications)
 
 #Update
@@ -306,7 +576,7 @@ def contacts_create():
         # Get all contacts to re-render the form
         connection = get_db()
         cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM contacts ORDER BY contact_id DESC")
+        cursor.execute("SELECT * FROM contacts ORDER BY contact_id ASC")
         contacts = cursor.fetchall()
         cursor.close()
         connection.close()
@@ -331,7 +601,7 @@ def contacts_create():
 def contacts_read():
     connection = get_db()
     cursor = connection.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM contacts ORDER BY contact_id DESC")
+    cursor.execute("SELECT * FROM contacts ORDER BY contact_id ASC")
     contacts = cursor.fetchall()
     cursor.close()
     connection.close()
@@ -355,7 +625,7 @@ def contacts_update(contact_id):
         # Get all contacts to re-render the form
         connection = get_db()
         cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM contacts ORDER BY contact_id DESC")
+        cursor.execute("SELECT * FROM contacts ORDER BY contact_id ASC")
         contacts = cursor.fetchall()
         cursor.close()
         connection.close()

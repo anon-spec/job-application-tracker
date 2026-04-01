@@ -79,19 +79,22 @@ Create/Read/Update/Delete contacts from dataset
                         <td>{{ contact.notes }}</td>
                         <td>
                             <div class="actions">
-                                
-                                <form action="{{url_for('contacts_update', contact_id=contact.contact_id) }}" method="post">
-                                    <input name="company_id" type="number" value="{{ contact.company_id }}" required>
-                                    <input name="contact_name" type="text" value="{{ contact.contact_name }}">
-                                    <input name="title" type="text" value="{{ contact.title }}">
-                                    <input name="email" type="email" value="{{ contact.email }}">
-                                    <input name="phone" type="tel" value="{{ contact.phone }}">
-                                    <input name="linkedin_url" type="url" value="{{ contact.linkedin_url }}" data-url-type="linkedin">
-                                    <input name="notes" type="text" value="{{ contact.notes }}">
-                                    <button type="submit">Save</button>
-                                </form>
+                                <button
+                                    type="button"
+                                    class="open-edit-contact"
+                                    data-contact='{{ {
+                                        "contact_id": contact.contact_id,
+                                        "company_id": contact.company_id,
+                                        "contact_name": contact.contact_name,
+                                        "title": contact.title,
+                                        "email": contact.email,
+                                        "phone": contact.phone,
+                                        "linkedin_url": contact.linkedin_url,
+                                        "notes": contact.notes
+                                    } | tojson | forceescape }}'
+                                >Edit</button>
 
-                                <form action="{{url_for('contacts_delete', contact_id=contact.contact_id) }}" method="post" onsubmit="return confirm('Delete this contact?');">
+                                <form action="{{url_for('contacts_delete', contact_id=contact.contact_id) }}" method="post" data-delete-form data-delete-message="Delete this contact?">
                                     <button type="submit" class="danger">Delete</button>
                                 </form>
                             </div>
@@ -104,4 +107,77 @@ Create/Read/Update/Delete contacts from dataset
         <p class="empty">No contacts found yet. Add your first contact above.</p>
     {% endif %}
 </section>
+
+<dialog id="contact-edit-modal" class="edit-modal">
+    <h2>Edit Contact</h2>
+    <form id="contact-edit-form" method="post">
+        <div>
+            <label for="edit-contact-company-id">Company ID</label>
+            <input id="edit-contact-company-id" name="company_id" type="number" data-field-label="Company ID" required>
+        </div>
+        <div>
+            <label for="edit-contact-name">Contact</label>
+            <input id="edit-contact-name" name="contact_name" type="text" maxlength="100" data-field-label="Contact" required>
+        </div>
+        <div>
+            <label for="edit-contact-title">Title</label>
+            <input id="edit-contact-title" name="title" type="text" maxlength="100">
+        </div>
+        <div>
+            <label for="edit-contact-email">Email</label>
+            <input id="edit-contact-email" name="email" type="email" maxlength="100">
+        </div>
+        <div>
+            <label for="edit-contact-phone">Phone</label>
+            <input id="edit-contact-phone" name="phone" type="tel" maxlength="20">
+        </div>
+        <div>
+            <label for="edit-contact-linkedin-url">LinkedIn URL</label>
+            <input id="edit-contact-linkedin-url" name="linkedin_url" type="url" maxlength="200" data-url-type="linkedin">
+        </div>
+        <div>
+            <label for="edit-contact-notes">Notes</label>
+            <input id="edit-contact-notes" name="notes" type="text">
+        </div>
+        <div class="modal-actions">
+            <button type="submit">Save</button>
+            <button type="button" class="secondary" id="contact-edit-cancel">Cancel</button>
+        </div>
+    </form>
+</dialog>
+
+<script>
+    (function () {
+        var modal = document.getElementById("contact-edit-modal");
+        if (!modal) return;
+
+        var form = document.getElementById("contact-edit-form");
+        var cancel = document.getElementById("contact-edit-cancel");
+        var actionTemplate = "{{ url_for('contacts_update', contact_id=0) }}";
+
+        function setValue(id, value) {
+            var element = document.getElementById(id);
+            if (element) element.value = value || "";
+        }
+
+        document.querySelectorAll(".open-edit-contact").forEach(function (button) {
+            button.addEventListener("click", function () {
+                var contact = JSON.parse(button.dataset.contact);
+                form.action = actionTemplate.replace("/0/update", "/" + contact.contact_id + "/update");
+                setValue("edit-contact-company-id", contact.company_id);
+                setValue("edit-contact-name", contact.contact_name);
+                setValue("edit-contact-title", contact.title);
+                setValue("edit-contact-email", contact.email);
+                setValue("edit-contact-phone", contact.phone);
+                setValue("edit-contact-linkedin-url", contact.linkedin_url);
+                setValue("edit-contact-notes", contact.notes);
+                modal.showModal();
+            });
+        });
+
+        cancel.addEventListener("click", function () {
+            modal.close();
+        });
+    })();
+</script>
 {% endblock %}

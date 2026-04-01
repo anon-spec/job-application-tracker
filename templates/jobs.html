@@ -10,6 +10,10 @@ Create/Read/Update/Delete jobs from dataset
 
 <h1>Jobs</h1>
 
+{% if error %}
+	<p style="color: #b91c1c; margin-bottom: 12px;">{{ error }}</p>
+{% endif %}
+
 <section class="card">
 	<h2>Add Job</h2>
 	<form action="{{ url_for('jobs_create') }}" method="post">
@@ -54,8 +58,8 @@ Create/Read/Update/Delete jobs from dataset
 				<input id="create-job-url" name="job_url" type="url" maxlength="300">
 			</div>
 			<div>
-				<label for="create-requirements">Requirements (JSON)</label>
-				<input id="create-requirements" name="requirements" type="text" placeholder='{"skills":["python"]}'>
+				<label for="create-requirements">Requirements (JSON object)</label>
+				<input id="create-requirements" name="requirements" type="text" placeholder='{"required_skills":["python","sql"],"preferred_skills":["flask"]}'>
 			</div>
 			<div>
 				<label>&nbsp;</label>
@@ -92,26 +96,36 @@ Create/Read/Update/Delete jobs from dataset
 						<td>{{ job.salary_min }} - {{ job.salary_max }}</td>
 						<td>{{ job.date_posted }}</td>
 						<td>{{ job.job_url }}</td>
-						<td>{{ job.requirements }}</td>
+						<td class="json-cell">
+							{% if job.requirements_lines %}
+								<ul class="json-list">
+									{% for line in job.requirements_lines %}
+										<li>{{ line }}</li>
+									{% endfor %}
+								</ul>
+							{% else %}
+								None
+							{% endif %}
+						</td>
 						<td>
 							<div class="actions">
-								<form action="{{ url_for('jobs_update', job_id=job.job_id) }}" method="post">
-									<input name="company_id" type="number" value="{{ job.company_id }}" required>
-									<input name="job_title" type="text" value="{{ job.job_title }}" required>
-									<select name="job_type">
-										{% for option in ['Full-time', 'Part-time', 'Contract', 'Internship'] %}
-											<option value="{{ option }}" {% if job.job_type == option %}selected{% endif %}>{{ option }}</option>
-										{% endfor %}
-									</select>
-									<input name="salary_min" type="number" value="{{ job.salary_min or '' }}" min="0">
-									<input name="salary_max" type="number" value="{{ job.salary_max or '' }}" min="0">
-									<input name="job_url" type="url" value="{{ job.job_url or '' }}">
-									<input name="date_posted" type="date" value="{{ job.date_posted or '' }}">
-									<input name="requirements" type="text" value="{{ job.requirements or '' }}">
-									<button type="submit">Save</button>
-								</form>
+								<button
+									type="button"
+									class="open-edit-job"
+									data-job='{{ {
+										"job_id": job.job_id,
+										"company_id": job.company_id,
+										"job_title": job.job_title,
+										"job_type": job.job_type,
+										"salary_min": job.salary_min,
+										"salary_max": job.salary_max,
+										"job_url": job.job_url,
+										"date_posted": job.date_posted,
+										"requirements": job.requirements
+									} | tojson | forceescape }}'
+								>Edit</button>
 
-								<form action="{{ url_for('jobs_delete', job_id=job.job_id) }}" method="post" onsubmit="return confirm('Delete this job?');">
+								<form action="{{ url_for('jobs_delete', job_id=job.job_id) }}" method="post" data-delete-form data-delete-message="Delete this job?">
 									<button type="submit" class="danger">Delete</button>
 								</form>
 							</div>
@@ -124,4 +138,87 @@ Create/Read/Update/Delete jobs from dataset
 		<p class="empty">No jobs found yet. Add your first job above.</p>
 	{% endif %}
 </section>
+
+<dialog id="job-edit-modal" class="edit-modal">
+	<h2>Edit Job</h2>
+	<form id="job-edit-form" method="post">
+		<div>
+			<label for="edit-job-company-id">Company ID</label>
+			<input id="edit-job-company-id" name="company_id" type="number" data-field-label="Company ID" required>
+		</div>
+		<div>
+			<label for="edit-job-title">Job Title</label>
+			<input id="edit-job-title" name="job_title" type="text" maxlength="100" data-field-label="Job title" required>
+		</div>
+		<div>
+			<label for="edit-job-type">Job Type</label>
+			<select id="edit-job-type" name="job_type">
+				<option value="Full-time">Full-time</option>
+				<option value="Part-time">Part-time</option>
+				<option value="Contract">Contract</option>
+				<option value="Internship">Internship</option>
+			</select>
+		</div>
+		<div>
+			<label for="edit-salary-min">Salary Min</label>
+			<input id="edit-salary-min" name="salary_min" type="number" min="0">
+		</div>
+		<div>
+			<label for="edit-salary-max">Salary Max</label>
+			<input id="edit-salary-max" name="salary_max" type="number" min="0">
+		</div>
+		<div>
+			<label for="edit-job-url">Job URL</label>
+			<input id="edit-job-url" name="job_url" type="url" maxlength="300">
+		</div>
+		<div>
+			<label for="edit-date-posted">Date Posted</label>
+			<input id="edit-date-posted" name="date_posted" type="date">
+		</div>
+		<div>
+			<label for="edit-requirements">Requirements</label>
+			<input id="edit-requirements" name="requirements" type="text">
+		</div>
+		<div class="modal-actions">
+			<button type="submit">Save</button>
+			<button type="button" class="secondary" id="job-edit-cancel">Cancel</button>
+		</div>
+	</form>
+</dialog>
+
+<script>
+	(function () {
+		var modal = document.getElementById("job-edit-modal");
+		if (!modal) return;
+
+		var form = document.getElementById("job-edit-form");
+		var cancel = document.getElementById("job-edit-cancel");
+		var actionTemplate = "{{ url_for('jobs_update', job_id=0) }}";
+
+		function setValue(id, value) {
+			var element = document.getElementById(id);
+			if (element) element.value = value || "";
+		}
+
+		document.querySelectorAll(".open-edit-job").forEach(function (button) {
+			button.addEventListener("click", function () {
+				var job = JSON.parse(button.dataset.job);
+				form.action = actionTemplate.replace("/0/update", "/" + job.job_id + "/update");
+				setValue("edit-job-company-id", job.company_id);
+				setValue("edit-job-title", job.job_title);
+				setValue("edit-job-type", job.job_type);
+				setValue("edit-salary-min", job.salary_min);
+				setValue("edit-salary-max", job.salary_max);
+				setValue("edit-job-url", job.job_url);
+				setValue("edit-date-posted", job.date_posted);
+				setValue("edit-requirements", job.requirements);
+				modal.showModal();
+			});
+		});
+
+		cancel.addEventListener("click", function () {
+			modal.close();
+		});
+	})();
+</script>
 {% endblock %}

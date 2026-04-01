@@ -23,6 +23,7 @@ salary_min INT, salary_max INT,
 job_url VARCHAR(300),
 date_posted DATE,
 requirements JSON,
+UNIQUE KEY uq_jobs_combo (company_id, job_title, job_type, salary_min, salary_max, date_posted, job_url, requirements(255)),
 FOREIGN KEY (company_id) REFERENCES companies(company_id)
 );
 
@@ -63,38 +64,21 @@ VALUES
 'Massachusetts');
 
 
--- read
-/*
-SELECT * FROM companies;
-SELECT * FROM companies WHERE company_id = %s;
 
--- update
-UPDATE companies SET company_name = %s, industry = %s, website = %s, city = %s, state = %s, notes = %s WHERE company_id = %s;
-
--- delete
-DELETE FROM companies WHERE company_id = %s;*/
 
 -- JOBS
 -- create
-INSERT IGNORE INTO jobs (company_id, job_title, job_type, salary_min, salary_max, date_posted)
+INSERT IGNORE INTO jobs (company_id, job_title, job_type, salary_min, salary_max, date_posted, requirements)
 VALUES
-(1, 'Software Developer', 'Internship', 70000, 90000, '2025-01-15'),
-(1, 'Database Administrator', 'Full-time', 75000, 95000, '2025-01-10'),
-(2, 'Data Analyst', 'Contract', 65000, 85000, '2025-01-12'),
-(3, 'Cloud Engineer', 'Full-time', 80000, 100000, '2025-01-08'),
-(4, 'Junior Developer', 'Part-time', 55000, 70000, '2025-01-14'),
-(4, 'Senior Developer', 'Full-time', 95000, 120000, '2025-01-14'),
-(5, 'ML Engineer', 'Full-time', 90000, 115000, '2025-01-11');
+(1, 'Software Developer', 'Internship', 70000, 90000, '2025-01-15', JSON_OBJECT('required_skills', JSON_ARRAY('python', 'sql', 'git'), 'preferred_skills', JSON_ARRAY('flask', 'docker', 'aws'), 'education', 'Bachelor in CS or related field', 'experience_years', 2, 'remote_option', TRUE)),
+(1, 'Database Administrator', 'Full-time', 75000, 95000, '2025-01-10', JSON_OBJECT('required_skills', JSON_ARRAY('sql', 'mysql', 'python'), 'preferred_skills', JSON_ARRAY('linux', 'aws'), 'education', 'Bachelor degree', 'experience_years', 2, 'remote_option', FALSE)),
+(2, 'Data Analyst', 'Contract', 65000, 85000, '2025-01-12', JSON_OBJECT('required_skills', JSON_ARRAY('sql', 'excel', 'tableau'), 'preferred_skills', JSON_ARRAY('python', 'r'), 'education', 'Bachelor degree', 'experience_years', 1, 'remote_option', FALSE)),
+(3, 'Cloud Engineer', 'Full-time', 80000, 100000, '2025-01-08', JSON_OBJECT('required_skills', JSON_ARRAY('aws', 'docker', 'linux'), 'preferred_skills', JSON_ARRAY('terraform', 'python'), 'education', 'Bachelor degree', 'experience_years', 3, 'remote_option', TRUE)),
+(4, 'Junior Developer', 'Part-time', 55000, 70000, '2025-01-14', JSON_OBJECT('required_skills', JSON_ARRAY('html', 'css', 'javascript'), 'preferred_skills', JSON_ARRAY('react', 'git'), 'education', 'Associate degree', 'experience_years', 1, 'remote_option', TRUE)),
+(4, 'Senior Developer', 'Full-time', 95000, 120000, '2025-01-14', JSON_OBJECT('required_skills', JSON_ARRAY('python', 'flask', 'postgresql'), 'preferred_skills', JSON_ARRAY('docker', 'aws', 'ci/cd'), 'education', 'Bachelor in CS or related field', 'experience_years', 4, 'remote_option', TRUE)),
+(5, 'ML Engineer', 'Full-time', 90000, 115000, '2025-01-11', JSON_OBJECT('required_skills', JSON_ARRAY('python', 'pandas', 'scikit-learn'), 'preferred_skills', JSON_ARRAY('tensorflow', 'sql', 'docker'), 'education', 'Bachelor in CS or related field', 'experience_years', 2, 'remote_option', TRUE));
 
--- read
-/*SELECT * FROM jobs;
-SELECT * FROM jobs WHERE job_id = %s;
 
--- update
-UPDATE jobs SET company_id = %s, job_title = %s, job_type = %s, salary_min = %s, salary_max = %s, job_url = %s, date_posted = %s WHERE job_id = %s;
-
--- delete
-DELETE FROM jobs WHERE job_id = %s;*/
 
 
 -- APPLICATIONS
@@ -108,15 +92,6 @@ VALUES
 (7, '2025-01-12', 'Screening', 'v2.1', TRUE);
 
 
--- read
-/*SELECT * FROM applications;
-SELECT * FROM applications WHERE application_id = %s;
-
--- update
-UPDATE applications SET job_id = %s, application_date = %s, status = %s, resume_version = %s, cover_letter_sent = %s, interview_data = %s WHERE application_id = %s;
-
--- delete
-DELETE FROM applications WHERE application_id = %s;*/
 
 -- CONTACTS
 -- create
@@ -129,14 +104,46 @@ VALUES
 (5, 'Lisa Garcia', 'lgarcia@smarttech.com', 'Talent Acquisition');
 
 
-/*-- read
-SELECT * FROM contacts;
-SELECT * FROM contacts WHERE contact_id = %s;
 
--- update
-UPDATE contacts SET company_id = %s, contact_name= %s, title = %s, email = %s, phone = %s, linkedin_url = %s, notes = %s WHERE contact_id = %s;
-
--- delete
-DELETE FROM contacts WHERE contact_id = %s;
-*/
 SHOW Tables;
+
+UPDATE applications
+SET interview_data = '{
+	"interview_rounds": 2,
+    "interviewers": ["Sarah Johnson", "Mike Chen"],
+    "technical_questions": ["SQL joins", "Python basics", "API design"],
+    "feedback": "Strong technical skills, good communication",
+    "next_steps": "Final round scheduled"
+}'
+WHERE application_id = 2;
+
+UPDATE applications
+SET interview_data = '{
+	"interview_rounds": 1, 
+    "interviewers": ["Emily Williams"],
+    "technical_questions": ["Database normalization", "Transaction isolation"],
+    "feedback": "Needs more experience with cloud platforms",
+    "rating": 3
+}'
+WHERE application_id = 4;
+
+UPDATE jobs
+SET requirements = '{
+	"required_skills": ["Python", "SQL", "Git"],
+    "preferred_skills": ["Flask", "Docker", "AWS"],
+    "education": "Bachelor in CS or related field",
+    "experience_years": 2,
+    "remote_option": true
+}'
+WHERE job_id = 1;
+
+UPDATE jobs 
+SET requirements = '{
+	"required_skills": ["SQL", "Excel", "Tableau"],
+    "preferred_skills": ["Python", "R"],
+    "education": "Bachelor degree",
+    "experience_years": 1,
+    "remote_option": false
+}'
+WHERE job_id = 3;
+

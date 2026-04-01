@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Job Match{% endblock %}
+
+{% block content %}
+<h1>Job Match</h1>
+
+<section class="card">
+	<h2>Enter Your Skills</h2>
+	<form action="{{ url_for('job_match') }}" method="post">
+		<label for="skills">Skills (comma-separated)</label>
+		<input
+			id="skills"
+			name="skills"
+			type="text"
+			placeholder="Python, SQL, Flask"
+			value="{{ user_skills_input or '' }}"
+			required
+		>
+		<button type="submit" style="margin-top: 10px;">Match Jobs</button>
+	</form>
+</section>
+
+{% if user_skills %}
+<section class="card">
+	<h2>Your Skills</h2>
+	<p>{{ user_skills | join(', ') }}</p>
+</section>
+{% endif %}
+
+{% if matches is defined and matches %}
+<section>
+	<h2>Matching Jobs</h2>
+	<table>
+		<thead>
+			<tr>
+				<th>Rank</th>
+				<th>Job</th>
+				<th>Final Match %</th>
+				<th>Required Skills</th>
+				<th>Preferred Skills</th>
+				<th>Missing Required</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for match in matches %}
+			<tr>
+				<td>{{ loop.index }}</td>
+				<td>{{ match.job_title }} at {{ match.company_name }}</td>
+				<td>{{ match.percent }}%<br><small>Required: {{ match.required_percent }}%, Preferred: {{ match.preferred_percent }}%</small></td>
+				<td>{{ match.matched_required_count }}/{{ match.total_required }} matched<br><small>{{ match.matched_required_skills | join(', ') if match.matched_required_skills else 'None' }}</small></td>
+				<td>{{ match.matched_preferred_count }}/{{ match.total_preferred }} matched<br><small>{{ match.matched_preferred_skills | join(', ') if match.matched_preferred_skills else 'None' }}</small></td>
+				<td>{{ match.missing_required_skills | join(', ') if match.missing_required_skills else 'None' }}</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</section>
+{% elif user_skills_input %}
+<section class="card">
+	<p>No jobs found yet. Add jobs with requirements first.</p>
+</section>
+{% endif %}
+{% endblock %}

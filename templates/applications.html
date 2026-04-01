@@ -41,7 +41,7 @@ Create/Read/Update/Delete applications from dataset
 		<div class="row">
 			<div>
 				<label for="create-resume">Resume Version</label>
-				<input id="create-resume" name="resume_version" type="text" placeholder="e.g. v3.0">
+				<input id="create-resume" name="resume_version" type="text" placeholder="e.g. v3">
 			</div>
 			<div>
 				<label for="create-cover-letter">Cover Letter Sent</label>
@@ -86,27 +86,34 @@ Create/Read/Update/Delete applications from dataset
 						<td>{{ application.status }}</td>
 						<td>{{ application.resume_version }}</td>
 						<td>{{ 'Yes' if application.cover_letter_sent else 'No' }}</td>
-						<td><pre>{{ application.interview_data }}</pre></td>
+						<td class="json-cell">
+							{% if application.interview_data_lines %}
+								<ul class="json-list">
+									{% for line in application.interview_data_lines %}
+										<li>{{ line }}</li>
+									{% endfor %}
+								</ul>
+							{% else %}
+								None
+							{% endif %}
+						</td>
 						<td>
 							<div class="actions">
-								<form action="{{url_for('applications_update', application_id=application.application_id) }}" method="post">
-									<input name="job_id" type="number" value="{{ application.job_id }}" required>
-									<input name="application_date" type="date" value="{{ application.application_date }}" required>
-									<select name="status">
-										{% for option in ['Applied', 'Screening', 'Interview', 'Offer', 'Rejected', 'Withdrawn'] %}
-											<option value="{{ option }}" {% if application.status == option %}selected{% endif %}>{{ option }}</option>
-										{% endfor %}
-									</select>
-									<input name="resume_version" type="text" value="{{ application.resume_version or '' }}">
-									<select name="cover_letter_sent">
-										<option value="1" {% if application.cover_letter_sent %}selected{% endif %}>Yes</option>
-										<option value="0" {% if not application.cover_letter_sent %}selected{% endif %}>No</option>
-									</select>
-									<textarea name="interview_data" rows="2">{{ application.interview_data or '' }}</textarea>
-									<button type="submit">Save</button>
-								</form>
+								<button
+									type="button"
+									class="open-edit-application"
+									data-application='{{ {
+										"application_id": application.application_id,
+										"job_id": application.job_id,
+										"application_date": application.application_date,
+										"status": application.status,
+										"resume_version": application.resume_version,
+										"cover_letter_sent": 1 if application.cover_letter_sent else 0,
+										"interview_data": application.interview_data
+									} | tojson | forceescape }}'
+								>Edit</button>
 
-								<form action="{{url_for('applications_delete', application_id=application.application_id) }}" method="post" onsubmit="return confirm('Delete this application?');">
+								<form action="{{url_for('applications_delete', application_id=application.application_id) }}" method="post" data-delete-form data-delete-message="Delete this application?">
 									<button type="submit" class="danger">Delete</button>
 								</form>
 							</div>
@@ -119,4 +126,82 @@ Create/Read/Update/Delete applications from dataset
 		<p class="empty">No applications found yet. Add your first application above.</p>
 	{% endif %}
 </section>
+
+<dialog id="application-edit-modal" class="edit-modal">
+	<h2>Edit Application</h2>
+	<form id="application-edit-form" method="post">
+		<div>
+			<label for="edit-application-job-id">Job ID</label>
+			<input id="edit-application-job-id" name="job_id" type="number" data-field-label="Job ID" required>
+		</div>
+		<div>
+			<label for="edit-application-date">Application Date</label>
+			<input id="edit-application-date" name="application_date" type="date" data-field-label="Application date" required>
+		</div>
+		<div>
+			<label for="edit-application-status">Status</label>
+			<select id="edit-application-status" name="status">
+				<option value="Applied">Applied</option>
+				<option value="Screening">Screening</option>
+				<option value="Interview">Interview</option>
+				<option value="Offer">Offer</option>
+				<option value="Rejected">Rejected</option>
+				<option value="Withdrawn">Withdrawn</option>
+			</select>
+		</div>
+		<div>
+			<label for="edit-resume-version">Resume Version</label>
+			<input id="edit-resume-version" name="resume_version" type="text">
+		</div>
+		<div>
+			<label for="edit-cover-letter-sent">Cover Letter Sent</label>
+			<select id="edit-cover-letter-sent" name="cover_letter_sent">
+				<option value="1">Yes</option>
+				<option value="0">No</option>
+			</select>
+		</div>
+		<div>
+			<label for="edit-interview-data">Interview Data</label>
+			<textarea id="edit-interview-data" name="interview_data" rows="2"></textarea>
+		</div>
+		<div class="modal-actions">
+			<button type="submit">Save</button>
+			<button type="button" class="secondary" id="application-edit-cancel">Cancel</button>
+		</div>
+	</form>
+</dialog>
+
+<script>
+	(function () {
+		var modal = document.getElementById("application-edit-modal");
+		if (!modal) return;
+
+		var form = document.getElementById("application-edit-form");
+		var cancel = document.getElementById("application-edit-cancel");
+		var actionTemplate = "{{ url_for('applications_update', application_id=0) }}";
+
+		function setValue(id, value) {
+			var element = document.getElementById(id);
+			if (element) element.value = value || "";
+		}
+
+		document.querySelectorAll(".open-edit-application").forEach(function (button) {
+			button.addEventListener("click", function () {
+				var application = JSON.parse(button.dataset.application);
+				form.action = actionTemplate.replace("/0/update", "/" + application.application_id + "/update");
+				setValue("edit-application-job-id", application.job_id);
+				setValue("edit-application-date", application.application_date);
+				setValue("edit-application-status", application.status);
+				setValue("edit-resume-version", application.resume_version);
+				setValue("edit-cover-letter-sent", application.cover_letter_sent);
+				setValue("edit-interview-data", application.interview_data);
+				modal.showModal();
+			});
+		});
+
+		cancel.addEventListener("click", function () {
+			modal.close();
+		});
+	})();
+</script>
 {% endblock %}

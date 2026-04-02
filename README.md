@@ -27,5 +27,5 @@ python app.py
 If you prefer not to use `root`, create a dedicated MySQL user and grant it access to `job_application_tracker`.
 
 ## Video
-<video src="/Recording 2026-04-01 235902.mp4" width = "640" height = "480" controls> </video>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/zyDR-ml22pk?si=MLPWUTr8K-Da1J5j" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 

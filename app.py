@@ -70,7 +70,7 @@ def parse_requirements_value(value):
         json_value = json.loads(text)
         return parse_requirements_value(json_value)
     except json.JSONDecodeError:
-        # Backward-compatible plain text input: treat as required skills.
+        #Backward-compatible plain text input: treat as required skills.
         return {
             "required_skills": parse_skills_csv(text),
             "preferred_skills": [],
@@ -189,6 +189,13 @@ def validate_requirements_payload(payload):
 
     return True
 
+
+def normalize_optional_json_text(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
 #normalizes url by adding https:// in front of url if missing
 def normalize_url(value):
     if not value:
@@ -204,6 +211,7 @@ def normalize_url(value):
 
 #For linkedin url input, function checks if linkedin link is valid. Returns tuple (is_valid, error_message)
 def validate_linkedin_url(url):
+    #Can't use requests library to scrape page, have to check by looking if url contains "in" or "company"
     if not url:
         return True, None
     
@@ -226,14 +234,97 @@ def validate_linkedin_url(url):
     return True, None
 
 
-@app.route('/')
+@app.route('/dashboard')
 def dashboard():
     connection = get_db()
     cursor = connection.cursor(dictionary=True)
-    cursor.execute('SELECT COUNT(*) as count FROM applications')
-    stats = cursor.fetchone()
+    cursor.execute(
+        """
+        SELECT
+            (SELECT COUNT(*) FROM companies) AS total_companies,
+            (SELECT COUNT(*) FROM jobs) AS total_jobs,
+            (SELECT COUNT(*) FROM applications) AS total_applications,
+            (SELECT COUNT(*) FROM contacts) AS total_contacts
+        """
+    )
+    totals = cursor.fetchone() or {}
+
+    cursor.execute(
+        """
+        SELECT status, COUNT(*) AS total
+        FROM applications
+        GROUP BY status
+        ORDER BY FIELD(status, 'Applied', 'Screening', 'Interview', 'Offer', 'Rejected', 'Withdrawn')
+        """
+    )
+    status_rows = cursor.fetchall()
+
+    cursor.execute(
+        """
+        SELECT
+            a.application_id,
+            a.application_date,
+            a.status,
+            j.job_title,
+            c.company_name
+        FROM applications a
+        LEFT JOIN jobs j ON j.job_id = a.job_id
+        LEFT JOIN companies c ON c.company_id = j.company_id
+        ORDER BY a.application_date DESC, a.application_id DESC
+        LIMIT 6
+        """
+    )
+    recent_applications = cursor.fetchall()
+
+    cursor.execute(
+        """
+        SELECT
+            COALESCE(c.company_name, 'Unknown Company') AS company_name,
+            COUNT(*) AS total_applications
+        FROM applications a
+        LEFT JOIN jobs j ON j.job_id = a.job_id
+        LEFT JOIN companies c ON c.company_id = j.company_id
+        GROUP BY COALESCE(c.company_name, 'Unknown Company')
+        ORDER BY total_applications DESC, company_name ASC
+        LIMIT 5
+        """
+    )
+    top_companies = cursor.fetchall()
+
     connection.close()
-    return render_template('dashboard.html', stats=stats)
+
+    status_order = ['Applied', 'Screening', 'Interview', 'Offer', 'Rejected', 'Withdrawn']
+    status_totals = {row['status']: row['total'] for row in status_rows}
+    total_applications = int(totals.get('total_applications') or 0)
+    status_breakdown = [
+        {
+            'status': status,
+            'total': status_totals.get(status, 0),
+            'percent': round((status_totals.get(status, 0) / total_applications) * 100, 1) if total_applications else 0,
+        }
+        for status in status_order
+    ]
+
+    interview_count = int(status_totals.get('Interview') or 0)
+    offer_count = int(status_totals.get('Offer') or 0)
+    rejected_count = int(status_totals.get('Rejected') or 0)
+    active_count = int(status_totals.get('Applied') or 0) + int(status_totals.get('Screening') or 0) + interview_count + offer_count
+
+    response_rate = round((interview_count / total_applications) * 100, 1) if total_applications else 0
+    offer_rate = round((offer_count / total_applications) * 100, 1) if total_applications else 0
+    rejection_rate = round((rejected_count / total_applications) * 100, 1) if total_applications else 0
+
+    return render_template(
+        'dashboard.html',
+        totals=totals,
+        status_breakdown=status_breakdown,
+        recent_applications=recent_applications,
+        top_companies=top_companies,
+        active_count=active_count,
+        response_rate=response_rate,
+        offer_rate=offer_rate,
+        rejection_rate=rejection_rate,
+    )
 
 
 @app.route('/job-match', methods=["GET", "POST"])
@@ -354,7 +445,7 @@ def companies_read():
 #Update
 @app.route("/companies/<int:company_id>/update", methods=["POST"])
 def companies_update(company_id):
-    company_name = request.form["company_name"]
+    company_name = request.form["company_name"] #required
     industry = request.form.get("industry")
     website = request.form.get("website")
     city = request.form.get("city")
@@ -492,7 +583,7 @@ def applications_create():
     status = request.form.get("status")
     resume_version = request.form.get("resume_version")
     cover_letter_sent = request.form.get("cover_letter_sent")
-    interview_data = request.form.get("interview_data")
+    interview_data = normalize_optional_json_text(request.form.get("interview_data"))
     
     connection = get_db()
     cursor = connection.cursor()
@@ -528,7 +619,7 @@ def applications_update(application_id):
     status = request.form.get("status")
     resume_version = request.form.get("resume_version")
     cover_letter_sent = request.form.get("cover_letter_sent")
-    interview_data = request.form.get("interview_data")
+    interview_data = normalize_optional_json_text(request.form.get("interview_data"))
 
     connection = get_db()
     cursor = connection.cursor()

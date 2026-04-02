@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | Job Application Tracker{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+	<h1>Statistics Overview</h1>
+	<p>Track progress across applications</p>
+</section>
+
+<section class="dashboard-kpis">
+	<article class="dashboard-kpi card">
+		<h3>Total Applications</h3>
+		<p class="kpi-value">{{ totals.total_applications or 0 }}</p>
+	</article>
+	<article class="dashboard-kpi card">
+		<h3>Total Jobs</h3>
+		<p class="kpi-value">{{ totals.total_jobs or 0 }}</p>
+	</article>
+	<article class="dashboard-kpi card">
+		<h3>Total Companies</h3>
+		<p class="kpi-value">{{ totals.total_companies or 0 }}</p>
+	</article>
+	<article class="dashboard-kpi card">
+		<h3>Total Contacts</h3>
+		<p class="kpi-value">{{ totals.total_contacts or 0 }}</p>
+	</article>
+</section>
+
+<section class="dashboard-kpis compact">
+	<article class="dashboard-kpi card">
+		<h3>Active Pipeline</h3>
+		<p class="kpi-value">{{ active_count }}</p>
+	</article>
+	<article class="dashboard-kpi card">
+		<h3>Interview Rate</h3>
+		<p class="kpi-value">{{ response_rate }}%</p>
+	</article>
+	<article class="dashboard-kpi card">
+		<h3>Offer Rate</h3>
+		<p class="kpi-value">{{ offer_rate }}%</p>
+	</article>
+	<article class="dashboard-kpi card">
+		<h3>Rejection Rate</h3>
+		<p class="kpi-value">{{ rejection_rate }}%</p>
+	</article>
+</section>
+
+<section class="dashboard-grid">
+	<article class="card">
+		<h2>Application Status Breakdown</h2>
+		{% if status_breakdown %}
+		<div class="status-list">
+			{% for row in status_breakdown %}
+			<div class="status-row">
+				<span class="status-label">{{ row.status }}</span>
+				<progress class="status-meter" max="100" value="{{ row.percent }}"></progress>
+				<span class="status-total">{{ row.total }}</span>
+			</div>
+			{% endfor %}
+		</div>
+		{% else %}
+		<p class="empty">No application data yet.</p>
+		{% endif %}
+	</article>
+
+	<article class="card">
+		<h2>Top Companies by Applications</h2>
+		{% if top_companies %}
+		<ul class="company-list">
+			{% for company in top_companies %}
+			<li>
+				<span>{{ company.company_name }}</span>
+				<strong>{{ company.total_applications }}</strong>
+			</li>
+			{% endfor %}
+		</ul>
+		{% else %}
+		<p class="empty">No company application data yet.</p>
+		{% endif %}
+	</article>
+</section>
+
+<section class="card">
+	<h2>Recent Applications</h2>
+	{% if recent_applications %}
+	<table>
+		<thead>
+			<tr>
+				<th>Date</th>
+				<th>Job</th>
+				<th>Company</th>
+				<th>Status</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for app in recent_applications %}
+			<tr>
+				<td>{{ app.application_date }}</td>
+				<td>{{ app.job_title or 'Unknown Job' }}</td>
+				<td>{{ app.company_name or 'Unknown Company' }}</td>
+				<td>{{ app.status or 'N/A' }}</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	{% else %}
+	<p class="empty">No recent applications yet.</p>
+	{% endif %}
+</section>
+{% endblock %}

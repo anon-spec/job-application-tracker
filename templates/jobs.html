@@ -58,7 +58,7 @@ Create/Read/Update/Delete jobs from dataset
 				<input id="create-job-url" name="job_url" type="url" maxlength="300">
 			</div>
 			<div>
-				<label for="create-requirements">Requirements (JSON object)</label>
+				<label for="create-requirements">Requirements (JSON Format)</label>
 				<input id="create-requirements" name="requirements" type="text" placeholder='{"required_skills":["python","sql"],"preferred_skills":["flask"]}'>
 			</div>
 			<div>
@@ -79,7 +79,7 @@ Create/Read/Update/Delete jobs from dataset
 					<th>Company ID</th>
 					<th>Title</th>
 					<th>Type</th>
-					<th>Salary</th>
+					<th>Salary (Min, Max)</th>
 					<th>Date Posted</th>
 					<th>URL</th>
 					<th>Requirements</th>
@@ -93,7 +93,7 @@ Create/Read/Update/Delete jobs from dataset
 						<td>{{ job.company_id }}</td>
 						<td>{{ job.job_title }}</td>
 						<td>{{ job.job_type }}</td>
-						<td>{{ job.salary_min }} - {{ job.salary_max }}</td>
+						<td>${{ job.salary_min }} - ${{ job.salary_max }}</td>
 						<td>{{ job.date_posted }}</td>
 						<td>{{ job.job_url }}</td>
 						<td class="json-cell">

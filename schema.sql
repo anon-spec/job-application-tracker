@@ -146,4 +146,3 @@ SET requirements = '{
     "remote_option": false
 }'
 WHERE job_id = 3;
-

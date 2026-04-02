@@ -55,6 +55,7 @@ Create/Read/Update/Delete companies from dataset
         <table>
             <thead>
                 <tr>
+                    <th>Company ID</th>
                     <th>Company Name</th>
                     <th>Industry</th>
                     <th>Website</th>
@@ -67,6 +68,7 @@ Create/Read/Update/Delete companies from dataset
             <tbody>
                 {% for company in companies %}
                     <tr>
+                        <td>{{ company.company_id }}</td>
                         <td>{{ company.company_name }}</td>
                         <td>{{ company.industry }}</td>
                         <td>{{ company.website }}</td>

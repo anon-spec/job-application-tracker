@@ -10,6 +10,7 @@
 <body>
 	<main class="container">
 		<nav style="margin-bottom: 20px; display: flex; gap: 8px; flex-wrap: wrap;">
+			
 			<a href="{{ url_for('dashboard') }}">Dashboard</a>
 			<a href="{{ url_for('job_match') }}">Job Match</a>
 			<a href="{{ url_for('companies_read') }}">Companies</a>
@@ -65,7 +66,7 @@
 				input.value = normalizeUrl(input.value);
 			}
 
-			// Finds (or creates) an inline error element for a specific field.
+			//Finds (or creates) an inline error element for a specific field.
 			function getOrCreateErrorElement(input) {
 				var fieldKey = input.id || input.name || "field";
 				var selector = '.error-message[data-for="' + fieldKey + '"]';
@@ -152,33 +153,12 @@
 				});
 			});
 
-			// Close open dialog when user clicks outside the dialog panel.
+			//Close open dialog only when the backdrop itself is clicked.
 			document.querySelectorAll("dialog").forEach(function (dialog) {
-				var pointerDownInside = false;
-
-				dialog.addEventListener("mousedown", function (e) {
-					var rect = dialog.getBoundingClientRect();
-					pointerDownInside =
-						e.clientX >= rect.left &&
-						e.clientX <= rect.right &&
-						e.clientY >= rect.top &&
-						e.clientY <= rect.bottom;
-				});
-
 				dialog.addEventListener("click", function (e) {
-					var rect = dialog.getBoundingClientRect();
-					var clickedInside =
-						e.clientX >= rect.left &&
-						e.clientX <= rect.right &&
-						e.clientY >= rect.top &&
-						e.clientY <= rect.bottom;
-
-					// Only treat as backdrop close when both press and release are outside.
-					if (!pointerDownInside && !clickedInside) {
+					if (e.target === dialog) {
 						dialog.close();
 					}
-
-					pointerDownInside = false;
 				});
 			});
 
@@ -200,7 +180,7 @@
 				deleteConfirmDialog.close();
 			});
 
-			// Attach delete handler to all delete forms
+			//Attaches delete handler to all delete forms
 			document.querySelectorAll("form[data-delete-form]").forEach(function (form) {
 				form.addEventListener("submit", function (e) {
 					e.preventDefault();

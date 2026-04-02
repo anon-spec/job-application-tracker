@@ -25,3 +25,7 @@ python app.py
 ```
 
 If you prefer not to use `root`, create a dedicated MySQL user and grant it access to `job_application_tracker`.
+
+## Video
+<video src="/Recording 2026-04-01 235902.mp4" width = "640" height = "480" controls> </video>
+

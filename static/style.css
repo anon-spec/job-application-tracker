@@ -152,7 +152,128 @@ body {
 			background: #475569;
 		}
 
+		.dashboard-header {
+			margin-bottom: 16px;
+		}
+
+		.dashboard-header p {
+			margin: 0;
+			color: #4b5563;
+		}
+
+		.dashboard-kpis {
+			display: grid;
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+			gap: 10px;
+			margin-bottom: 14px;
+		}
+
+		.dashboard-kpis.compact {
+			margin-bottom: 20px;
+		}
+
+		.dashboard-kpi {
+			margin-bottom: 0;
+		}
+
+		.dashboard-kpi h3 {
+			margin: 0 0 6px;
+			font-size: 0.92rem;
+			color: #374151;
+		}
+
+		.kpi-value {
+			margin: 0;
+			font-size: 1.8rem;
+			font-weight: 700;
+			color: #111827;
+		}
+
+		.dashboard-grid {
+			display: grid;
+			grid-template-columns: 2fr 1fr;
+			gap: 12px;
+			margin-bottom: 20px;
+		}
+
+		.status-list {
+			display: grid;
+			gap: 10px;
+		}
+
+		.status-row {
+			display: grid;
+			grid-template-columns: 110px 1fr 40px;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.status-label {
+			font-weight: 600;
+			font-size: 0.92rem;
+		}
+
+		.status-total {
+			text-align: right;
+			font-weight: 600;
+		}
+
+		.status-meter {
+			height: 10px;
+			width: 100%;
+			background: #e5e7eb;
+			border-radius: 999px;
+			overflow: hidden;
+			appearance: none;
+			border: none;
+		}
+
+		.status-meter::-webkit-progress-bar {
+			background: #e5e7eb;
+			border-radius: 999px;
+		}
+
+		.status-meter::-webkit-progress-value {
+			background: linear-gradient(90deg, #2563eb, #3b82f6);
+			border-radius: 999px;
+		}
+
+		.status-meter::-moz-progress-bar {
+			background: linear-gradient(90deg, #2563eb, #3b82f6);
+			border-radius: 999px;
+		}
+
+		.company-list {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: grid;
+			gap: 10px;
+		}
+
+		.company-list li {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 8px 10px;
+			background: #f8fafc;
+			border: 1px solid #e5e7eb;
+			border-radius: 8px;
+		}
+
 		@media (max-width: 900px) {
+			.dashboard-kpis {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+			}
+
+			.dashboard-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.status-row {
+				grid-template-columns: 85px 1fr 35px;
+			}
+
 			.row {
 				grid-template-columns: 1fr;
 			}
@@ -180,5 +301,11 @@ body {
 			td {
 				border: none;
 				border-bottom: 1px solid #f3f4f6;
+			}
+		}
+
+		@media (max-width: 560px) {
+			.dashboard-kpis {
+				grid-template-columns: 1fr;
 			}
 		}
